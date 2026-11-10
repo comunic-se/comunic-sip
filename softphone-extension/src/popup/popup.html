@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comunic.SIP</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">Comunic.SIP</span>
+      <span id="status-pill" class="pill pill--idle">
+        <span class="dot"></span><span id="status-text">Desconectado</span>
+      </span>
+    </header>
+
+    <main>
+      <section class="card" id="dialer-card">
+        <input id="dial-input" class="field" type="tel" inputmode="tel"
+               placeholder="Digite um número" autocomplete="off" />
+        <div class="actions">
+          <button id="call-btn" class="btn btn--call">Ligar</button>
+          <button id="hangup-btn" class="btn btn--hangup" disabled>Desligar</button>
+        </div>
+        <p id="call-info" class="call-info"></p>
+      </section>
+
+      <details class="settings" id="settings">
+        <summary>Ajustes do ramal</summary>
+        <label class="label" for="pbx-url">URL do PBX (HTTPS)</label>
+        <input id="pbx-url" class="field" type="url" placeholder="https://pbx.cliente.com.br" />
+
+        <label class="label" for="extension">Ramal</label>
+        <input id="extension" class="field" type="text" placeholder="201" />
+
+        <label class="label" for="signature">Assinatura (sign)</label>
+        <textarea id="signature" class="field field--area" rows="3"
+                  placeholder="Cole aqui a assinatura gerada pelo gestor"></textarea>
+
+        <button id="connect-btn" class="btn btn--primary">Salvar e conectar</button>
+      </details>
+    </main>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
