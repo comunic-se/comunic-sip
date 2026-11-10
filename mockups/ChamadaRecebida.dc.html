@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Chamada recebida sobre o CRM</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/comunicchatdesignsystem_606a51/styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ic-sm{width:16px;height:16px}
+button{font-family:inherit;cursor:pointer}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="position: relative; width: 100%; height: 900px; display: flex; flex-direction: column; background: var(--surface-page); font-family: var(--font-sans); color: var(--text-body); font-size: 13px; overflow: hidden">
+
+  <header style="display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 18px; background: #ffffff; border-bottom: 1px solid var(--border-default); flex: 0 0 auto">
+    <span style="display: flex; align-items: baseline; gap: 3px; margin-right: 22px; white-space: nowrap; font-size: 16px; font-weight: 800; letter-spacing: -0.02em"><span style="color: var(--text-strong)">COMUNIC</span><span style="color: var(--brand-cyan)">Chat</span></span>
+    <nav aria-label="Módulos" style="display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; flex-wrap: wrap">
+      <sc-for list="{{nav}}" as="item" hint-placeholder-count="5">
+        <a href="#" style="{{item.style}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{item.icon}}"></path></svg>{{item.label}}</a>
+      </sc-for>
+    </nav>
+    <span style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 10px; border: 1px solid #fde68a; background: #fef3c7; border-radius: 999px; color: #92400e; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 999px; background: #f59e0b"></span>Ramal 201 · Chamando</span>
+  </header>
+
+  <div style="display: flex; flex: 1; min-height: 0">
+    <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 24px; background: #ffffff; border-bottom: 1px solid var(--border-default)">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-muted)"><path d="{{ic.back}}"></path></svg>
+        <span style="font-size: 18px; font-weight: 700; color: var(--text-strong)">Funil de Vendas</span>
+        <svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.chevron}}"></path></svg>
+        <span style="display: flex; padding: 3px; border-radius: 999px; background: var(--surface-page); margin-left: 8px"><span style="height: 28px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: var(--shadow-sm); display: flex; align-items: center; font-weight: 500">Kanban</span><span style="height: 28px; padding: 0 14px; display: flex; align-items: center; color: var(--text-muted)">Lista</span></span>
+        <span style="flex: 1"></span>
+        <span style="width: 220px; height: 36px; border: 1px solid var(--border-default); border-radius: 999px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--text-subtle)"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.search}}"></path></svg>Pesquisar</span>
+      </div>
+
+      <div style="flex: 1; min-height: 0; overflow-x: auto; display: flex; gap: 16px; padding: 20px 24px">
+        <sc-for list="{{cols}}" as="col" hint-placeholder-count="4">
+          <section style="width: 290px; flex: 0 0 290px; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-strong)">{{col.name}}<span style="color: var(--text-muted); font-weight: 400">({{col.count}})</span><span style="flex: 1"></span><span style="font-size: 12px; color: var(--text-muted); font-weight: 500">{{col.total}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 12px; background: var(--slate-200); min-height: 120px">
+              <sc-for list="{{col.cards}}" as="card" hint-placeholder-count="3">
+                <article style="{{card.style}}">
+                  <span style="display: flex; align-items: center; gap: 6px"><span style="font-size: 14px; font-weight: 600; color: var(--text-strong); flex: 1">{{card.title}}</span><sc-if value="{{card.ringing}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 12px; height: 12px"><path d="{{ic.phone}}"></path></svg>Ligando</span></sc-if></span>
+                  <span style="font-size: 12px; color: var(--text-muted)">{{card.contact}}</span>
+                  <span style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 13px; font-weight: 600; color: var(--text-strong)">{{card.value}}</span><span style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 13px; height: 13px"><path d="{{ic.phone}}"></path></svg>{{card.calls}}</span></span>
+                </article>
+              </sc-for>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </main>
+    <aside aria-label="Chat interno" style="width: 44px; flex: 0 0 44px; background: #ffffff; border-left: 1px solid var(--border-default)"></aside>
+  </div>
+
+  <!-- Pop-up de chamada recebida -->
+  <section aria-label="Chamada recebida" style="position: absolute; top: 68px; right: 60px; width: 360px; border: 1px solid var(--border-default); border-radius: 16px; background: #ffffff; box-shadow: var(--shadow-modal); overflow: hidden">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--text-strong); color: #ffffff; font-size: 12px; font-weight: 600">
+      <svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true" style="color: #4ade80"><path d="{{ic.inc}}"></path></svg>Chamada recebida · Fila Comercial<span style="flex: 1"></span><span style="font-weight: 400; opacity: .8">Tronco Principal</span>
+    </div>
+    <div style="display: flex; gap: 14px; padding: 16px">
+      <span style="width: 52px; height: 52px; flex: 0 0 52px; border-radius: 999px; background: #fed7aa; color: #9a3412; font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center">RL</span>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <span style="font-size: 17px; font-weight: 700; color: var(--text-strong)">Renata Lopes</span>
+        <span style="font-size: 13px; color: var(--text-muted)">+55 21 99876-1234 · Lopes Engenharia</span>
+        <span style="display: flex; gap: 3px; margin-top: 2px"><span style="height: 14px; padding: 0 4px; border-radius: 2px; background: #66ccff; color: #fff; font-size: 9px; font-weight: 600; display: flex; align-items: center; letter-spacing: 0.04em">C. PABX</span><span style="height: 14px; padding: 0 4px; border-radius: 2px; background: #ff158a; color: #fff; font-size: 9px; font-weight: 600; display: flex; align-items: center; letter-spacing: 0.04em">PARCEIRO</span></span>
+      </span>
+    </div>
+    <dl style="margin: 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--surface-page); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px">
+      <div><dt style="font-size: 11px; color: var(--text-subtle)">Card no funil</dt><dd style="margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--text-strong)">Proposta · R$ 12.500,00</dd></div>
+      <div><dt style="font-size: 11px; color: var(--text-subtle)">Responsável</dt><dd style="margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--text-strong)">Pedro</dd></div>
+      <div><dt style="font-size: 11px; color: var(--text-subtle)">Última interação</dt><dd style="margin: 2px 0 0; font-size: 13px; color: var(--text-body)">WhatsApp, há 2 dias</dd></div>
+      <div><dt style="font-size: 11px; color: var(--text-subtle)">Carteira</dt><dd style="margin: 2px 0 0; font-size: 13px; color: var(--text-body)">Pedro · Comercial</dd></div>
+    </dl>
+    <div style="display: flex; gap: 10px; padding: 16px">
+      <button type="button" style="flex: 1; height: 42px; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; border-radius: 999px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(135deg)"><path d="{{ic.phone}}"></path></svg>Recusar</button>
+      <button type="button" style="flex: 1.4; height: 42px; border: 0; background: #15803d; color: #ffffff; border-radius: 999px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.phone}}"></path></svg>Atender</button>
+    </div>
+    <div style="display: flex; justify-content: center; gap: 16px; padding: 0 16px 14px; font-size: 12px"><a href="#">Abrir conversa</a><a href="#">Abrir card</a><a href="#">Enviar para fila</a></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var ic = {
+      chat:'M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155',
+      crm:'M7.5 7.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM14.25 18a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM7.5 7.5h9M6.4 9.4l4.2 6.6m6.9-6.6-4.2 6.6',
+      apps:'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z',
+      chart:'M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605',
+      cog:'M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+      phone:'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z',
+      inc:'m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25',
+      back:'M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18',
+      chevron:'m19.5 8.25-7.5 7.5-7.5-7.5',
+      search:'m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z'
+    };
+    var navBase = 'display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 999px; font-size: 14px; text-decoration: none; white-space: nowrap; ';
+    var nav = [
+      { label: 'Atendimentos', icon: ic.chat }, { label: 'CRM', icon: ic.crm, on: true },
+      { label: 'Apps', icon: ic.apps }, { label: 'Relatórios', icon: ic.chart }, { label: 'Ajustes', icon: ic.cog }
+    ].map(function (n) { return { label: n.label, icon: n.icon, style: navBase + (n.on ? 'background: #f1f5f9; color: #0f172a; font-weight: 600;' : 'color: #1e293b; font-weight: 500;') }; });
+    var cardBase = 'display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 10px; background: #ffffff; ';
+    function card(t, c, v, n, ringing) { return { title: t, contact: c, value: v, calls: n, ringing: !!ringing, style: cardBase + (ringing ? 'border: 1px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.18);' : 'border: 1px solid #e2e8f0;') }; }
+    var cols = [
+      { name: 'Prospecção', count: 3, total: 'R$ 18.400,00', cards: [card('PABX 8 ramais', 'Oficina Ramos', 'R$ 4.900,00', '1 ligação'), card('Migração de linha', 'Thiago Mendes', 'R$ 3.500,00', '0 ligações'), card('Central de atendimento', 'Grupo Vértice', 'R$ 10.000,00', '2 ligações')] },
+      { name: 'Qualificação', count: 2, total: 'R$ 21.000,00', cards: [card('URA + filas', 'Lucas Prado', 'R$ 9.000,00', '3 ligações'), card('Comunic Chat + PABX', 'Clínica Sol', 'R$ 12.000,00', '1 ligação')] },
+      { name: 'Proposta', count: 2, total: 'R$ 24.300,00', cards: [card('PABX em nuvem 12 ramais', 'Renata Lopes', 'R$ 12.500,00', '4 ligações', true), card('Gravação de chamadas', 'Marina Alves', 'R$ 11.800,00', '2 ligações')] },
+      { name: 'Negociação', count: 1, total: 'R$ 30.000,00', cards: [card('Contact center 30 PA', 'Rede Norte', 'R$ 30.000,00', '6 ligações')] }
+    ];
+    return { ic: ic, nav: nav, cols: cols };
+  }
+}
+</script>
+</body>
+</html>

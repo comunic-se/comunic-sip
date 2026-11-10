@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Relatórios — Chamadas</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/comunicchatdesignsystem_606a51/styles.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ic-sm{width:16px;height:16px}
+button{font-family:inherit;cursor:pointer}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+th{font-weight:600}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 900px; display: flex; flex-direction: column; background: var(--surface-page); font-family: var(--font-sans); color: var(--text-body); font-size: 13px">
+
+  <header style="display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 18px; background: #ffffff; border-bottom: 1px solid var(--border-default); flex: 0 0 auto">
+    <span style="display: flex; align-items: baseline; gap: 3px; margin-right: 22px; white-space: nowrap; font-size: 16px; font-weight: 800; letter-spacing: -0.02em"><span style="color: var(--text-strong)">COMUNIC</span><span style="color: var(--brand-cyan)">Chat</span></span>
+    <nav aria-label="Módulos" style="display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; flex-wrap: wrap">
+      <sc-for list="{{nav}}" as="item" hint-placeholder-count="5">
+        <a href="#" style="{{item.style}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{item.icon}}"></path></svg>{{item.label}}</a>
+      </sc-for>
+    </nav>
+    <span style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 10px; border: 1px solid var(--border-default); background: #ffffff; border-radius: 999px; color: var(--text-body); font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 999px; background: #22c55e"></span>Ramal 201 · Disponível</span>
+  </header>
+
+  <div style="display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 24px; background: #ffffff; border-bottom: 1px solid var(--border-default); font-size: 14px">
+    <span style="height: 44px; padding: 0 14px; display: flex; align-items: center; color: var(--text-muted)">Indicadores</span>
+    <span style="height: 44px; padding: 0 14px; display: flex; align-items: center; color: #2563eb; font-weight: 600; box-shadow: inset 0 -2px 0 #2563eb">Chamadas</span>
+  </div>
+
+  <main style="flex: 1; max-width: 1360px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+      <span style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-strong)">Chamadas</h1>
+        <span style="font-size: 13px; color: var(--text-muted)">Ligações feitas e recebidas pelos ramais do Comunic.SIP</span>
+      </span>
+      <span style="flex: 1"></span>
+      <button type="button" style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border: 1px solid var(--border-default); background: #fff; border-radius: 999px; font-size: 14px; color: var(--text-body)"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.download}}"></path></svg>Exportar</button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+        <span style="display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border: 1px solid var(--border-default); background: #ffffff; border-radius: 999px; font-size: 13px; white-space: nowrap"><span style="color: var(--text-muted)">{{f.k}}:</span><span style="color: var(--text-strong); font-weight: 500">{{f.v}}</span><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--text-muted)"><path d="{{ic.chevron}}"></path></svg></span>
+      </sc-for>
+      <span style="flex: 1"></span>
+      <span style="width: 240px; height: 38px; border: 1px solid var(--border-default); background: #fff; border-radius: 999px; display: flex; align-items: center; gap: 8px; padding: 0 14px; box-sizing: border-box; color: var(--text-subtle)"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.search}}"></path></svg>Contato ou número</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid var(--border-default); border-radius: 12px; background: #ffffff; box-shadow: var(--shadow-card)">
+          <span style="{{k.iconStyle}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{k.icon}}"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500">{{k.label}}</span>
+            <span style="font-size: 22px; font-weight: 700; color: var(--text-strong)">{{k.value}}</span>
+            <span style="font-size: 12px; color: {{k.deltaColor}}">{{k.delta}}</span>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="border: 1px solid var(--border-default); border-radius: 12px; background: #ffffff; overflow-x: auto">
+      <table style="width: 100%; min-width: 1000px; border-collapse: collapse; font-size: 13px">
+        <thead>
+          <tr style="height: 44px; background: var(--surface-sunken); color: var(--text-muted); font-size: 12px; text-align: left">
+            <th style="padding: 0 16px">Direção</th><th style="padding: 0 12px">Contato</th><th style="padding: 0 12px">Número</th><th style="padding: 0 12px">Ramal · Usuário</th><th style="padding: 0 12px">Início</th><th style="padding: 0 12px">Duração</th><th style="padding: 0 12px">Status</th><th style="padding: 0 16px; text-align: right">Gravação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+            <tr style="height: 52px; border-top: 1px solid var(--border-subtle)">
+              <td style="padding: 0 16px"><span style="{{r.dirStyle}}"><svg class="ic ic-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.dirIcon}}"></path></svg>{{r.dir}}</span></td>
+              <td style="padding: 0 12px; font-weight: 500; color: var(--text-strong)">{{r.contact}}</td>
+              <td style="padding: 0 12px; color: var(--text-muted)">{{r.number}}</td>
+              <td style="padding: 0 12px">{{r.ext}}</td>
+              <td style="padding: 0 12px; color: var(--text-muted)">{{r.start}}</td>
+              <td style="padding: 0 12px; font-variant-numeric: tabular-nums">{{r.dur}}</td>
+              <td style="padding: 0 12px"><span style="{{r.statusStyle}}">{{r.status}}</span></td>
+              <td style="padding: 0 16px"><span style="display: flex; justify-content: flex-end; gap: 6px">
+                <sc-if value="{{r.rec}}" hint-placeholder-val="{{true}}">
+                  <button type="button" aria-label="Ouvir gravação" style="width: 30px; height: 30px; border: 1px solid var(--border-default); background: #fff; border-radius: 999px; color: #2563eb; display: flex; align-items: center; justify-content: center"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; fill: #2563eb"><path d="{{ic.play}}"></path></svg></button>
+                  <button type="button" aria-label="Resumo da IA" style="width: 30px; height: 30px; border: 1px solid var(--border-default); background: #fff; border-radius: 999px; color: #2563eb; display: flex; align-items: center; justify-content: center"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 15px; height: 15px"><path d="{{ic.sparkles}}"></path></svg></button>
+                </sc-if>
+                <sc-if value="{{r.noRec}}" hint-placeholder-val="{{false}}"><span style="color: var(--text-subtle); font-size: 12px">—</span></sc-if>
+              </span></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 12px"><span>8 de 312 chamadas encontradas</span><span style="display: flex; gap: 6px"><span style="width: 30px; height: 30px; border-radius: 999px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center">1</span><span style="width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center">2</span><span style="width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center">3</span></span></div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var ic = {
+      chat:'M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155',
+      crm:'M7.5 7.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM14.25 18a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM7.5 7.5h9M6.4 9.4l4.2 6.6m6.9-6.6-4.2 6.6',
+      apps:'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z',
+      chart:'M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605',
+      cog:'M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+      phone:'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z',
+      inc:'m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25',
+      out:'m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25',
+      miss:'M6 18 18 6M6 6l12 12',
+      clock:'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+      check:'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+      chevron:'m19.5 8.25-7.5 7.5-7.5-7.5',
+      search:'m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z',
+      download:'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3',
+      play:'M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z',
+      sparkles:'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z'
+    };
+    var navBase = 'display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 999px; font-size: 14px; text-decoration: none; white-space: nowrap; ';
+    var nav = [
+      { label: 'Atendimentos', icon: ic.chat }, { label: 'CRM', icon: ic.crm }, { label: 'Apps', icon: ic.apps },
+      { label: 'Relatórios', icon: ic.chart, on: true }, { label: 'Ajustes', icon: ic.cog }
+    ].map(function (n) { return { label: n.label, icon: n.icon, style: navBase + (n.on ? 'background: #f1f5f9; color: #0f172a; font-weight: 600;' : 'color: #1e293b; font-weight: 500;') }; });
+    var filters = [{ k: 'Período', v: '01/11/26 – 09/11/26' }, { k: 'Direção', v: 'Todas' }, { k: 'Status', v: 'Todos' }, { k: 'Ramal', v: 'Todos' }, { k: 'Equipes', v: 'Todos' }];
+    var tint = 'width: 44px; height: 44px; flex: 0 0 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; ';
+    var kpis = [
+      { label: 'Total de chamadas', value: '312', delta: '↑ 8,3% vs. período anterior', deltaColor: '#15803d', icon: ic.phone, iconStyle: tint + 'background: #dbeafe; color: #1d4ed8;' },
+      { label: 'Atendidas', value: '264', delta: '84,6% do total', deltaColor: '#64748b', icon: ic.check, iconStyle: tint + 'background: #dcfce7; color: #15803d;' },
+      { label: 'Perdidas', value: '48', delta: '↓ 2,1% vs. período anterior', deltaColor: '#15803d', icon: ic.miss, iconStyle: tint + 'background: #fee2e2; color: #b91c1c;' },
+      { label: 'Tempo médio de ligação', value: '03:42', delta: 'Espera média 00:18', deltaColor: '#64748b', icon: ic.clock, iconStyle: tint + 'background: #fef3c7; color: #92400e;' }
+    ];
+    var pill = 'display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; ';
+    var st = {
+      atendida: pill + 'background: #dcfce7; color: #166534;',
+      perdida: pill + 'background: #fee2e2; color: #991b1b;',
+      naoatendida: pill + 'background: #fef3c7; color: #92400e;',
+      ocupado: pill + 'background: #f1f5f9; color: #475569;'
+    };
+    var dirBase = 'display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; ';
+    function row(d, c, n, e, s, du, status, label) {
+      var isIn = d === 'in';
+      var rec = status === 'atendida';
+      return {
+        dir: isIn ? 'Recebida' : 'Realizada', dirIcon: isIn ? ic.inc : ic.out,
+        dirStyle: dirBase + (isIn ? 'color: #1d4ed8;' : 'color: #15803d;'),
+        contact: c, number: n, ext: e, start: s, dur: du, status: label, statusStyle: st[status], rec: rec, noRec: !rec
+      };
+    }
+    var rows = [
+      row('out', 'Marina Alves', '+55 11 98765-4321', '201 · Pedro', '09/11/2026 14:02', '04:37', 'atendida', 'Atendida'),
+      row('in', 'Renata Lopes', '+55 21 99876-1234', '201 · Pedro', '09/11/2026 13:40', '06:52', 'atendida', 'Atendida'),
+      row('in', 'Lucas Prado', '+55 31 3222-1100', 'Fila Suporte', '09/11/2026 13:28', '00:00', 'perdida', 'Perdida'),
+      row('out', 'Thiago Mendes', '+55 11 4002-8922', '204 · Viviane', '09/11/2026 11:15', '01:20', 'atendida', 'Atendida'),
+      row('out', 'Oficina Ramos', '+55 19 99100-2233', '201 · Pedro', '09/11/2026 10:51', '00:00', 'naoatendida', 'Não atendida'),
+      row('in', 'Grupo Vértice', '+55 11 3030-4040', '203 · Poliana', '09/11/2026 10:02', '08:14', 'atendida', 'Atendida'),
+      row('out', 'Clínica Sol', '+55 41 98888-7766', '204 · Viviane', '08/11/2026 17:33', '00:00', 'ocupado', 'Ocupado'),
+      row('in', 'Rede Norte', '+55 92 3611-0000', '203 · Poliana', '08/11/2026 16:20', '12:05', 'atendida', 'Atendida')
+    ];
+    return { ic: ic, nav: nav, filters: filters, kpis: kpis, rows: rows };
+  }
+}
+</script>
+</body>
+</html>

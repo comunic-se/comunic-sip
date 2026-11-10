@@ -1,0 +1,32 @@
+/*
+ * Comunic.SIP — ajustes sobre o Comunic Chat Design System
+ *
+ * O design system da organização define índigo (#4f46e5) como cor de ação,
+ * mas o Comunic Chat em produção usa azul (Tailwind blue-600, #2563eb),
+ * medido na plataforma em 09/11/2026 (botão "Reiniciar", aba ativa,
+ * faixa "Ative as notificações na web", badge de fila em blue-700).
+ * Este arquivo alinha os tokens ao produto real. Carregar DEPOIS dos tokens.
+ * Decisão pendente: confirmar qual cor vale daqui para frente.
+ */
+html:root {
+  --brand-indigo-50: #eff6ff;
+  --brand-indigo-100: #dbeafe;
+  --brand-indigo-600: #2563eb;
+  --brand-indigo-700: #1d4ed8;
+
+  --action-primary: #2563eb;
+  --action-primary-hover: #1d4ed8;
+  --surface-selected: #dbeafe;
+  --text-link: #2563eb;
+  --border-focus: #2563eb;
+  --ring-focus: 0 0 0 3px rgba(37, 99, 235, .18);
+
+  /* Telefonia (Comunic.SIP) */
+  --call-accept: #15803d;      /* Atender / Ligar — green-700, contraste AA com texto branco */
+  --call-accept-tint: #dcfce7;
+  --call-hangup: #dc2626;      /* Encerrar / Recusar */
+  --call-hangup-tint: #fef2f2;
+  --call-hold: #f59e0b;        /* Em espera / Chamando */
+  --call-live-dot: #22c55e;    /* Em ligação / Online */
+  --softphone-header: #0f172a; /* faixa superior do softphone e do pop-up de chamada */
+}

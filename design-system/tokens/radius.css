@@ -1,0 +1,14 @@
+:root{
+--radius-xs:4px;
+--radius-sm:6px;
+--radius-md:8px;
+--radius-lg:12px;
+--radius-xl:16px;
+--radius-pill:999px;
+/* A plataforma é fortemente arredondada: campos, filtros e botões são pílulas. */
+--radius-field:var(--radius-pill);
+--radius-button:var(--radius-pill);
+--radius-card:var(--radius-lg);
+--radius-tag:var(--radius-xs);
+--radius-slot:var(--radius-sm);
+}

@@ -1,0 +1,20 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-09T21:10:00Z"},
+  "title": "Comunic.SIP — Mockups",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 900, "title": "1 · Atendimento com ligação em andamento", "expand": "fill", "is_interactive": true},
+    "ChamadaRecebida.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 900, "title": "2 · Chamada recebida sobre o CRM", "expand": "fill"},
+    "Chamadas.dc.html": {"x": 0, "y": 1020, "w": 1440, "h": 900, "title": "3 · Relatórios › Chamadas", "expand": "fill"},
+    "Telefonia.dc.html": {"x": 1520, "y": 1020, "w": 1440, "h": 900, "title": "4 · Ajustes › Telefonia", "expand": "fill"}
+  },
+  "order": ["Main.dc.html", "ChamadaRecebida.dc.html", "Chamadas.dc.html", "Telefonia.dc.html"],
+  "notes": {
+    "titulo": {"x": 0, "y": -300, "text": "Comunic.SIP — telefonia dentro do Comunic Chat", "kind": "title1", "maxW": 2960}
+  },
+  "designSystems": [
+    {"title": "Comunic Chat Design System", "namespace": "comunicchatdesignsystem_606a51", "artifact": "https://claude.ai/artifact/HK8jW3UUPJ9i76U5PpVnNK", "version": "1792867699-35ca", "copiedAt": "2026-11-09T21:10:00Z"}
+  ]
+}
