@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: dab79961-3960-4023-8672-e6bb31c382a5
+
+localResources:
+  specs:
+    - ../docs/comunic-chat-api/flwchat-openapi.json

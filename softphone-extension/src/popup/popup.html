@@ -63,6 +63,16 @@
 
       <!-- AJUSTES -->
       <section class="view" id="view-settings" hidden>
+        <label class="label" for="backend-url">Login integrado — URL do backend</label>
+        <input id="backend-url" class="field" type="text" inputmode="url" placeholder="http://127.0.0.1:8787" />
+        <button id="integ-btn" class="btn btn--primary">Ativar login integrado</button>
+        <p class="dial-msg" id="settings-msg" style="color:var(--muted);text-align:left;">
+          Com o login integrado, o ramal registra sozinho ao abrir o Comunic Chat.
+        </p>
+
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+        <label class="label">Modo manual (sem backend)</label>
         <label class="label" for="pbx-url">URL do PBX (HTTPS)</label>
         <input id="pbx-url" class="field" type="url" placeholder="https://pbx.cliente.com.br" />
         <label class="label" for="extension">Ramal</label>

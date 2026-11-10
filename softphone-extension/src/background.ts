@@ -98,6 +98,62 @@ function broadcastToPopup(msg: Extract<AnyMessage, { target: 'popup' }>): void {
   chrome.runtime.sendMessage(msg).catch(() => { /* popup pode estar fechado */ });
 }
 
+// ---------- Login integrado ----------
+// Observa as requisições do Comunic Chat para a API da Helena e captura o Bearer
+// do usuário. Esse token é enviado uma vez ao backend, que valida a identidade,
+// localiza o ramal vinculado e devolve a assinatura — o ramal registra sozinho.
+let lastHelenaAuth = '';
+
+async function loginIntegrado(helenaToken: string): Promise<void> {
+  const { backendUrl } = await chrome.storage.local.get('backendUrl');
+  console.log('[Comunic.SIP][login] token capturado; backendUrl =', backendUrl, '| status =', lastStatus.status);
+  if (!backendUrl) { console.log('[Comunic.SIP][login] sem backendUrl configurado — ignorando'); return; }
+  // Já conectado/conectando? Não refaz.
+  if (lastStatus.status === 'registered' || lastStatus.status === 'connecting') return;
+  console.log('[Comunic.SIP][login] chamando', `${String(backendUrl).replace(/\/+$/, '')}/v1/auth/extension`);
+
+  lastStatus = { status: 'connecting', detail: 'Login integrado…' };
+  broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'connecting', detail: 'Login integrado…' });
+
+  try {
+    const res = await fetch(`${String(backendUrl).replace(/\/+$/, '')}/v1/auth/extension`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ helenaToken }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      lastStatus = { status: 'failed', detail: `Backend ${res.status}` };
+      broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: `Backend ${res.status}: ${txt}` });
+      return;
+    }
+    const data = (await res.json()) as { extension: string; pbxUrl: string; sign: string };
+    console.log('[Comunic.SIP][login] backend OK — ramal', data.extension);
+    const config = { pbxURL: data.pbxUrl, extension: data.extension, signature: data.sign };
+    await chrome.storage.local.set(config);
+    await ensureOffscreen();
+    sendToOffscreen({ target: 'offscreen', type: 'INIT', config });
+  } catch (e: any) {
+    lastStatus = { status: 'failed', detail: 'Backend inacessível' };
+    broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: 'Backend inacessível: ' + String(e?.message ?? e) });
+  }
+}
+
+chrome.webRequest.onBeforeSendHeaders.addListener(
+  (details) => {
+    const auth = details.requestHeaders?.find((h) => h.name.toLowerCase() === 'authorization');
+    const val = auth?.value;
+    if (val && val.startsWith('Bearer ') && val !== lastHelenaAuth) {
+      console.log('[Comunic.SIP][login] Bearer visto em', details.url);
+      lastHelenaAuth = val;
+      loginIntegrado(val.slice(7));
+    }
+  },
+  { urls: ['https://api.wts.chat/*', 'https://api.flw.chat/*'] },
+  ['requestHeaders', 'extraHeaders'],
+);
+console.log('[Comunic.SIP][login] observador de token ativo');
+
 function notifyIncoming(state: CallState): void {
   if (state.active && state.direction === 'inbound' && (state.callStatus === 'ringing' || state.isRing)) {
     chrome.action.setBadgeText({ text: '●' }).catch(() => {});

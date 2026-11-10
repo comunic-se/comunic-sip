@@ -13,7 +13,8 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["offscreen", "storage", "notifications"],
-  "optional_host_permissions": ["https://*/*"],
+  "permissions": ["offscreen", "storage", "notifications", "webRequest"],
+  "host_permissions": ["https://api.wts.chat/*", "https://api.flw.chat/*"],
+  "optional_host_permissions": ["https://*/*", "http://127.0.0.1/*", "http://localhost/*"],
   "minimum_chrome_version": "116"
 }

@@ -308,12 +308,35 @@ for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']) {
 
 // ---------- Ajustes ----------
 async function loadSettings(): Promise<void> {
-  const s = await chrome.storage.local.get(['pbxURL', 'extension', 'signature']);
+  const s = await chrome.storage.local.get(['pbxURL', 'extension', 'signature', 'backendUrl']);
   $<HTMLInputElement>('pbx-url').value = s.pbxURL ?? '';
   $<HTMLInputElement>('extension').value = s.extension ?? '';
   $<HTMLTextAreaElement>('signature').value = s.signature ?? '';
+  $<HTMLInputElement>('backend-url').value = s.backendUrl ?? '';
   extensionNumber = s.extension ?? '';
 }
+
+$<HTMLButtonElement>('integ-btn').addEventListener('click', async () => {
+  const msg = $('settings-msg');
+  const url = $<HTMLInputElement>('backend-url').value.trim();
+  if (!url) { msg.textContent = 'Informe a URL do backend.'; return; }
+  // Padrão de permissão NÃO pode conter porta → usa protocolo + host.
+  let backendPattern: string;
+  try {
+    const u = new URL(url);
+    backendPattern = `${u.protocol}//${u.hostname}/*`;
+  } catch { msg.textContent = 'URL do backend inválida.'; return; }
+  try {
+    // Origem do backend + acesso ao PBX (origem decidida pelo backend).
+    const granted = await chrome.permissions.request({ origins: [backendPattern, 'https://*/*'] });
+    if (!granted) { msg.textContent = 'Permissão negada.'; return; }
+  } catch (e: any) {
+    msg.textContent = 'Erro ao pedir permissão: ' + String(e?.message ?? e);
+    return;
+  }
+  await chrome.storage.local.set({ backendUrl: url });
+  msg.textContent = 'Login integrado ativado. Abra o Comunic Chat para registrar o ramal.';
+});
 
 $<HTMLButtonElement>('connect-btn').addEventListener('click', async () => {
   const config: SdkConfig = {
