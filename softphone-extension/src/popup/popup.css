@@ -1,102 +1,185 @@
-/* Tokens herdados do Comunic Chat (ver design-system/). */
+/* Comunic.SIP — estilo no padrão do Comunic Chat / Comunic Phone. */
 :root {
-  --bg: #f1f5f9;
-  --card: #ffffff;
+  --bg: #ffffff;
+  --panel: #f8fafc;
   --text: #1e293b;
   --title: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
   --action: #2563eb;
   --action-hover: #1d4ed8;
+  --action-soft: #dbeafe;
   --call: #15803d;
+  --call-bright: #22c55e;
   --hangup: #dc2626;
   --amber: #f59e0b;
-  --green: #22c55e;
 }
 
 * { box-sizing: border-box; }
 
+html, body { margin: 0; }
 body {
-  width: 320px;
-  margin: 0;
+  width: 360px;
+  height: 560px;
+  display: flex;
+  flex-direction: column;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
+  overflow: hidden;
 }
 
-.topbar {
+/* ---------- Cabeçalho ---------- */
+.appbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  padding: 0 14px;
-  background: var(--title);
-  color: #fff;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
 }
-.brand { font-weight: 700; letter-spacing: -0.02em; }
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.12);
+.appbar-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.appbar-text { display: flex; flex-direction: column; min-width: 0; }
+.appbar-title { font-weight: 700; color: var(--title); letter-spacing: -0.01em; }
+.appbar-sub {
+  font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
 }
-.pill .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--muted); }
-.pill--idle .dot { background: var(--muted); }
-.pill--connecting .dot { background: var(--amber); }
-.pill--registered .dot { background: var(--green); }
-.pill--failed .dot { background: var(--hangup); }
+.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--muted); flex: 0 0 auto; }
+.dot--idle { background: var(--muted); }
+.dot--connecting { background: var(--amber); }
+.dot--registered { background: var(--call-bright); }
+.dot--failed { background: var(--hangup); }
 
-main { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.icon-btn {
+  width: 34px; height: 34px; border: none; border-radius: 999px;
+  background: transparent; color: var(--muted); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
 }
+.icon-btn:hover { background: var(--panel); color: var(--title); }
+.icon-btn svg { width: 20px; height: 20px; }
 
+/* ---------- Área central ---------- */
+main { flex: 1 1 auto; position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 14px; overflow-y: auto; }
+.view[hidden] { display: none; }
+
+.empty { margin: auto; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+/* ---------- Teclado ---------- */
+.dial-display {
+  width: 100%; height: 44px; text-align: center;
+  border: none; border-bottom: 1px solid var(--border);
+  font-size: 24px; font-weight: 600; color: var(--title); letter-spacing: 0.04em;
+  background: transparent; margin-bottom: 14px;
+}
+.dial-display:focus { outline: none; border-color: var(--action); }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 auto; max-width: 280px; }
+.key {
+  height: 60px; border: none; border-radius: 999px; background: var(--panel);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--title); transition: background 0.1s;
+}
+.key:hover { background: #eef2f7; }
+.key:active { background: var(--action-soft); }
+.key b { font-size: 22px; font-weight: 600; line-height: 1; }
+.key s { font-size: 9px; letter-spacing: 1px; color: var(--muted); text-decoration: none; height: 10px; }
+
+.dial-actions { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 16px; }
+.call-fab {
+  width: 60px; height: 60px; border: none; border-radius: 999px;
+  background: var(--call-bright); color: #fff; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
+}
+.call-fab:hover { background: var(--call); }
+.call-fab:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+.call-fab svg { width: 26px; height: 26px; }
+.dial-msg { text-align: center; font-size: 12px; color: var(--hangup); min-height: 16px; margin-top: 10px; }
+
+/* ---------- Ajustes ---------- */
 .field {
-  width: 100%;
-  height: 38px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: inherit;
-  color: var(--text);
-  background: #fff;
+  width: 100%; height: 40px; padding: 0 14px; border: 1px solid var(--border);
+  border-radius: 10px; font: inherit; color: var(--text); background: #fff;
 }
-.field--area { height: auto; padding: 10px 14px; border-radius: 10px; resize: vertical; }
-.field:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px #dbeafe; }
-
-.actions { display: flex; gap: 8px; }
-
+.field--area { height: auto; padding: 10px 14px; resize: vertical; }
+.field:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-soft); }
+.label { display: block; margin: 14px 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
 .btn {
-  flex: 1;
-  height: 38px;
-  border: none;
-  border-radius: 999px;
-  font: inherit;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
+  height: 44px; border: none; border-radius: 10px; font: inherit; font-weight: 600;
+  color: #fff; cursor: pointer; width: 100%;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn--primary { background: var(--action); margin-top: 18px; }
+.btn--primary:hover { background: var(--action-hover); }
 .btn--call { background: var(--call); }
 .btn--hangup { background: var(--hangup); }
-.btn--primary { background: var(--action); width: 100%; margin-top: 10px; }
-.btn--primary:hover { background: var(--action-hover); }
 
-.call-info { margin: 0; min-height: 16px; font-size: 12px; color: var(--muted); }
+/* ---------- Barra de abas ---------- */
+.tabbar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border); flex: 0 0 auto; background: #fff;
+}
+.tab {
+  border: none; background: transparent; cursor: pointer; padding: 8px 0 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--muted); font-size: 11px; font-weight: 500;
+}
+.tab svg { width: 22px; height: 22px; }
+.tab.active { color: var(--action); }
 
-.settings { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; }
-.settings summary { cursor: pointer; font-weight: 600; color: var(--title); }
-.label { display: block; margin: 12px 0 4px; font-size: 10px; text-transform: uppercase; color: var(--muted); }
+/* ---------- Overlays de chamada ---------- */
+.overlay {
+  position: absolute; inset: 0; z-index: 10; background: var(--bg);
+  display: flex; flex-direction: column; padding: 14px 16px; gap: 10px;
+  overflow-y: auto;
+}
+.overlay[hidden] { display: none; }
+.call-band { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 4px; }
+.call-avatar {
+  width: 52px; height: 52px; border-radius: 999px; background: var(--action-soft);
+  color: var(--action); display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; margin-bottom: 2px;
+}
+.call-number { font-size: 20px; font-weight: 700; color: var(--title); text-align: center; }
+.call-sub { font-size: 12px; color: var(--muted); }
+.timer { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--call); font-weight: 600; }
+
+.actions { display: flex; gap: 10px; margin-top: 12px; }
+.actions .btn { flex: 1; }
+
+.ctrl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+.transfer { margin-top: 10px; }
+.ctrl {
+  height: 50px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+}
+.ctrl svg { width: 20px; height: 20px; }
+.ctrl:hover { border-color: var(--action); }
+.ctrl.active { background: var(--amber); color: #fff; border-color: var(--amber); }
+
+.dtmf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dtmf button {
+  height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
+  font: inherit; font-size: 18px; font-weight: 600; color: var(--title); cursor: pointer;
+}
+.dtmf button:active { background: var(--action-soft); }
+
+/* ---------- Histórico ---------- */
+.hist-list { display: flex; flex-direction: column; }
+.hist-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.hist-dir { width: 18px; text-align: center; font-size: 15px; font-weight: 700; flex: 0 0 auto; }
+.hist-main { flex: 1 1 auto; min-width: 0; }
+.hist-name { font-weight: 600; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.hist-call {
+  width: 36px; height: 36px; border: none; border-radius: 999px; flex: 0 0 auto;
+  background: #dcfce7; color: var(--call); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.hist-call:hover { background: #bbf7d0; }
+.hist-call svg { width: 18px; height: 18px; }

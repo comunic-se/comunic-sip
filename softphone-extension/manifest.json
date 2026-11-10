@@ -5,8 +5,10 @@
   "description": "Softphone do Comunic Chat integrado ao Yeastar P-Series.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Comunic.SIP"
+    "default_title": "Comunic.SIP",
+    "default_icon": { "128": "icon-128.png" }
   },
+  "icons": { "128": "icon-128.png" },
   "background": {
     "service_worker": "background.js",
     "type": "module"

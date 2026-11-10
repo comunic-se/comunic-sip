@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comunic.SIP — Chamada</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">Comunic.SIP</span>
+    </header>
+
+    <main>
+      <!-- CHAMADA RECEBIDA -->
+      <section class="card call-card" id="incoming-view" hidden>
+        <div class="call-who">
+          <span id="inc-number" class="call-number"></span>
+          <span class="call-sub">Chamada recebida</span>
+        </div>
+        <div class="actions">
+          <button id="answer-btn" class="btn btn--call">Atender</button>
+          <button id="reject-btn" class="btn btn--hangup">Recusar</button>
+        </div>
+      </section>
+
+      <!-- EM CHAMADA -->
+      <section class="card call-card" id="incall-view" hidden>
+        <div class="call-who">
+          <span id="ic-number" class="call-number"></span>
+          <span id="ic-status" class="call-sub"></span>
+          <span id="ic-timer" class="timer"></span>
+        </div>
+        <div class="ctrl-grid">
+          <button id="mute-btn" class="ctrl">Mudo</button>
+          <button id="hold-btn" class="ctrl">Espera</button>
+          <button id="dtmf-btn" class="ctrl">Teclado</button>
+        </div>
+        <div id="dtmf-pad" class="dtmf" hidden></div>
+        <button id="hangup-btn" class="btn btn--hangup">Desligar</button>
+      </section>
+    </main>
+
+    <script type="module" src="./call.js"></script>
+  </body>
+</html>

@@ -19,31 +19,76 @@ export interface CallInfo {
   state?: string;
 }
 
+/** Estado completo da chamada atual, derivado de session.status do SDK. */
+export interface CallState {
+  active: boolean;
+  callId?: string;
+  number?: string;
+  name?: string;
+  direction?: 'inbound' | 'outbound';
+  callStatus?: 'ringing' | 'calling' | 'connecting' | 'talking';
+  isRing?: boolean;
+  isMute?: boolean;
+  isHold?: boolean;
+  callStartTime?: number;
+  /** Em modo de transferência assistida (consultando o destino). */
+  transferring?: boolean;
+  transferTarget?: string;
+}
+
+export type CallAction =
+  | 'answer'
+  | 'reject'
+  | 'hangup'
+  | 'mute'
+  | 'unmute'
+  | 'hold'
+  | 'unhold'
+  | 'dtmf'
+  | 'blindTransfer'
+  | 'consult'
+  | 'completeTransfer'
+  | 'cancelTransfer';
+
+/** Item do histórico de chamadas (CDR pessoal do ramal). */
+export interface HistoryItem {
+  number: string;
+  name?: string;
+  timestamp: number;
+  direction: 'inbound' | 'outbound' | 'missed';
+  disposition?: string;
+  talkDuration?: number;
+}
+
 // popup -> background
 export type ToBackground =
   | { target: 'background'; type: 'INIT_SDK'; config: SdkConfig }
   | { target: 'background'; type: 'GET_STATUS' }
   | { target: 'background'; type: 'CALL'; number: string }
-  | { target: 'background'; type: 'HANGUP' }
+  | { target: 'background'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
   | { target: 'background'; type: 'REQUEST_MIC' }
   // offscreen -> background
   | { target: 'background'; type: 'STATUS'; status: RegStatus; detail?: string }
-  | { target: 'background'; type: 'CALL_EVENT'; event: string; call?: CallInfo };
+  | { target: 'background'; type: 'CALL_EVENT'; event: string; call?: CallInfo }
+  | { target: 'background'; type: 'CALL_STATE'; state: CallState };
 
 // background -> offscreen
 export type ToOffscreen =
   | { target: 'offscreen'; type: 'INIT'; config: SdkConfig }
   | { target: 'offscreen'; type: 'CALL'; number: string }
-  | { target: 'offscreen'; type: 'HANGUP' };
+  | { target: 'offscreen'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
+  | { target: 'offscreen'; type: 'GET_HISTORY' };
 
 // background -> popup
 export type ToPopup =
   | { target: 'popup'; type: 'STATUS'; status: RegStatus; detail?: string }
-  | { target: 'popup'; type: 'CALL_EVENT'; event: string; call?: CallInfo };
+  | { target: 'popup'; type: 'CALL_EVENT'; event: string; call?: CallInfo }
+  | { target: 'popup'; type: 'CALL_STATE'; state: CallState };
 
 export type AnyMessage = ToBackground | ToOffscreen | ToPopup;
 
 export interface StatusSnapshot {
   status: RegStatus;
   detail?: string;
+  callState?: CallState;
 }

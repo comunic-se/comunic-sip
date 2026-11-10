@@ -7,39 +7,147 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <header class="topbar">
-      <span class="brand">Comunic.SIP</span>
-      <span id="status-pill" class="pill pill--idle">
-        <span class="dot"></span><span id="status-text">Desconectado</span>
-      </span>
+    <header class="appbar">
+      <div class="appbar-main">
+        <span id="status-dot" class="dot dot--idle"></span>
+        <div class="appbar-text">
+          <span class="appbar-title" id="appbar-title">Comunic.SIP</span>
+          <span class="appbar-sub" id="status-sub">Desconectado</span>
+        </div>
+      </div>
+      <button class="icon-btn" id="settings-btn" title="Ajustes" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </button>
     </header>
 
     <main>
-      <section class="card" id="dialer-card">
-        <input id="dial-input" class="field" type="tel" inputmode="tel"
-               placeholder="Digite um número" autocomplete="off" />
-        <div class="actions">
-          <button id="call-btn" class="btn btn--call">Ligar</button>
-          <button id="hangup-btn" class="btn btn--hangup" disabled>Desligar</button>
+      <!-- TECLADO -->
+      <section class="view" id="view-teclado">
+        <input id="dial-input" class="dial-display" type="tel" inputmode="tel" placeholder="" autocomplete="off" />
+        <div class="keypad">
+          <button class="key" data-k="1"><b>1</b><s></s></button>
+          <button class="key" data-k="2"><b>2</b><s>ABC</s></button>
+          <button class="key" data-k="3"><b>3</b><s>DEF</s></button>
+          <button class="key" data-k="4"><b>4</b><s>GHI</s></button>
+          <button class="key" data-k="5"><b>5</b><s>JKL</s></button>
+          <button class="key" data-k="6"><b>6</b><s>MNO</s></button>
+          <button class="key" data-k="7"><b>7</b><s>PQRS</s></button>
+          <button class="key" data-k="8"><b>8</b><s>TUV</s></button>
+          <button class="key" data-k="9"><b>9</b><s>WXYZ</s></button>
+          <button class="key" data-k="*"><b>&lowast;</b><s></s></button>
+          <button class="key" data-k="0"><b>0</b><s>+</s></button>
+          <button class="key" data-k="#"><b>#</b><s></s></button>
         </div>
-        <p id="call-info" class="call-info"></p>
+        <div class="dial-actions">
+          <button id="call-btn" class="call-fab" aria-label="Ligar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z"/></svg>
+          </button>
+        </div>
+        <p id="dialer-msg" class="dial-msg"></p>
       </section>
 
-      <details class="settings" id="settings">
-        <summary>Ajustes do ramal</summary>
+      <!-- CONTATOS -->
+      <section class="view" id="view-contatos" hidden>
+        <div class="empty">Contatos do Comunic Chat<br />— em breve nesta aba.</div>
+      </section>
+
+      <!-- HISTÓRICO -->
+      <section class="view" id="view-historico" hidden>
+        <div id="history-list" class="hist-list"></div>
+      </section>
+
+      <!-- MENSAGENS -->
+      <section class="view" id="view-mensagens" hidden>
+        <div class="empty">Mensagens<br />— em breve nesta aba.</div>
+      </section>
+
+      <!-- AJUSTES -->
+      <section class="view" id="view-settings" hidden>
         <label class="label" for="pbx-url">URL do PBX (HTTPS)</label>
         <input id="pbx-url" class="field" type="url" placeholder="https://pbx.cliente.com.br" />
-
         <label class="label" for="extension">Ramal</label>
         <input id="extension" class="field" type="text" placeholder="201" />
-
         <label class="label" for="signature">Assinatura (sign)</label>
-        <textarea id="signature" class="field field--area" rows="3"
-                  placeholder="Cole aqui a assinatura gerada pelo gestor"></textarea>
-
+        <textarea id="signature" class="field field--area" rows="3" placeholder="Cole aqui a assinatura gerada pelo gestor"></textarea>
         <button id="connect-btn" class="btn btn--primary">Salvar e conectar</button>
-      </details>
+      </section>
+
+      <!-- OVERLAY: CHAMADA RECEBIDA -->
+      <div class="overlay" id="incoming-view" hidden>
+        <div class="call-band">
+          <div class="call-avatar" id="inc-avatar">?</div>
+          <span id="inc-number" class="call-number"></span>
+          <span class="call-sub">Chamada recebida</span>
+        </div>
+        <div class="actions">
+          <button id="answer-btn" class="btn btn--call">Atender</button>
+          <button id="reject-btn" class="btn btn--hangup">Recusar</button>
+        </div>
+      </div>
+
+      <!-- OVERLAY: EM CHAMADA -->
+      <div class="overlay" id="incall-view" hidden>
+        <div class="call-band">
+          <div class="call-avatar" id="ic-avatar">?</div>
+          <span id="ic-number" class="call-number"></span>
+          <span id="ic-status" class="call-sub"></span>
+          <span id="ic-timer" class="timer"></span>
+        </div>
+        <div class="ctrl-grid" id="ctrl-grid">
+          <button id="mute-btn" class="ctrl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/></svg>
+            <span id="mute-label">Mudo</span>
+          </button>
+          <button id="hold-btn" class="ctrl">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.75 5.25a.75.75 0 01.75.75v12a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75zm-7.5 0A.75.75 0 019 6v12a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75z"/></svg>
+            <span id="hold-label">Espera</span>
+          </button>
+          <button id="dtmf-btn" class="ctrl">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+            <span>Teclado</span>
+          </button>
+          <button id="transfer-btn" class="ctrl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+            <span>Transferir</span>
+          </button>
+        </div>
+        <div id="dtmf-pad" class="dtmf" hidden></div>
+        <div id="transfer-panel" class="transfer" hidden>
+          <input id="transfer-input" class="field" type="tel" inputmode="tel" placeholder="Ramal/número de destino" autocomplete="off" />
+          <div class="actions" style="margin-top:8px;">
+            <button id="consult-btn" class="btn btn--primary">Consultar</button>
+            <button id="transfer-do" class="btn btn--call">Transferir agora</button>
+          </div>
+        </div>
+        <div class="actions" id="incall-actions">
+          <button id="hangup-btn" class="btn btn--hangup">Desligar</button>
+        </div>
+        <!-- Modo consulta: concluir ou voltar ao cliente -->
+        <div class="actions" id="consult-actions" hidden>
+          <button id="complete-transfer-btn" class="btn btn--call">Concluir transferência</button>
+          <button id="cancel-transfer-btn" class="btn btn--hangup">Voltar ao cliente</button>
+        </div>
+      </div>
     </main>
+
+    <nav class="tabbar">
+      <button class="tab active" data-tab="teclado">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.7"/><circle cx="12" cy="6" r="1.7"/><circle cx="18" cy="6" r="1.7"/><circle cx="6" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18" cy="12" r="1.7"/><circle cx="6" cy="18" r="1.7"/><circle cx="12" cy="18" r="1.7"/><circle cx="18" cy="18" r="1.7"/></svg>
+        <span>Teclado</span>
+      </button>
+      <button class="tab" data-tab="contatos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+        <span>Contatos</span>
+      </button>
+      <button class="tab" data-tab="historico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Histórico</span>
+      </button>
+      <button class="tab" data-tab="mensagens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+        <span>Mensagens</span>
+      </button>
+    </nav>
 
     <script type="module" src="./popup.js"></script>
   </body>
