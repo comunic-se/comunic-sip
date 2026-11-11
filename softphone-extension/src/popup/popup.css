@@ -109,6 +109,27 @@ main { flex: 1 1 auto; position: relative; overflow: hidden; }
 .backspace-btn:active { background: var(--action-soft); color: var(--action); }
 .backspace-btn svg { width: 24px; height: 24px; }
 .backspace-btn.is-empty { visibility: hidden; }
+
+/* Em ligação, a barra de abas some (não dá pra trocar de aba no meio da chamada) */
+body.in-call .tabbar { display: none; }
+
+/* Transferência: cabeçalho, campo com apagar e teclado igual ao do início (compacto) */
+.xfer-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--muted); height: 16px; }
+.link-btn { border: none; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--action); cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+.xfer-input { position: relative; }
+.xfer-input .field { width: 100%; padding-right: 44px; text-align: center; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.xfer-input .backspace-btn--sm { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; flex-basis: 32px; }
+.xfer-input .backspace-btn--sm svg { width: 20px; height: 20px; }
+.keypad--compact { gap: 4px; max-width: 228px; width: 100%; margin: 0 auto; }
+.keypad--compact .key { height: 30px; gap: 0; }
+.keypad--compact .key b { font-size: 15px; }
+.keypad--compact .key s { font-size: 7px; height: 8px; }
+.transfer { gap: 6px; }
+
+/* Com a transferência aberta: só nome/status no topo; controles e cronômetro somem */
+.overlay:has(#transfer-panel:not([hidden])) .ctrl-grid,
+.overlay:has(#transfer-panel:not([hidden])) .timer { display: none; }
 .dial-msg { text-align: center; font-size: 11px; color: var(--hangup); min-height: 14px; margin-top: 6px; }
 
 /* ---------- Ajustes ---------- */

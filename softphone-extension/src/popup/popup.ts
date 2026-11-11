@@ -197,6 +197,7 @@ function renderCall(state: CallState): void {
 
   incomingView.hidden = !incoming;
   incallView.hidden = !active || incoming;
+  document.body.classList.toggle('in-call', active);
 
   const who = state.name || state.number || 'Desconhecido';
 
@@ -263,41 +264,32 @@ document.querySelectorAll('.key').forEach((k) => {
 });
 // ---------- Apagar ----------
 // Clique: apaga o último dígito. Segurar (600 ms): limpa o número inteiro.
-const backspaceBtn = $<HTMLButtonElement>('backspace-btn');
 const HOLD_MS = 600;
-let holdTimer: ReturnType<typeof setTimeout> | undefined;
-let heldLong = false;
 
-function syncBackspace(): void {
-  backspaceBtn.classList.toggle('is-empty', dialInput.value.length === 0);
+/** Liga um botão de apagar a um campo e devolve a função que atualiza sua visibilidade. */
+function wireBackspace(btn: HTMLButtonElement, input: HTMLInputElement): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let heldLong = false;
+  const sync = () => btn.classList.toggle('is-empty', input.value.length === 0);
+  const cancel = () => { if (timer) clearTimeout(timer); timer = undefined; };
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // não tira o foco do campo
+    heldLong = false;
+    cancel();
+    timer = setTimeout(() => { heldLong = true; timer = undefined; input.value = ''; sync(); }, HOLD_MS);
+  });
+  btn.addEventListener('pointerup', () => {
+    cancel();
+    if (!heldLong) { input.value = input.value.slice(0, -1); sync(); }
+  });
+  btn.addEventListener('pointerleave', cancel);
+  btn.addEventListener('pointercancel', cancel);
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  input.addEventListener('input', sync);
+  sync();
+  return sync;
 }
-function cancelHold(): void {
-  if (holdTimer) clearTimeout(holdTimer);
-  holdTimer = undefined;
-}
-backspaceBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); // não tira o foco do campo
-  heldLong = false;
-  cancelHold();
-  holdTimer = setTimeout(() => {
-    heldLong = true;
-    dialInput.value = '';
-    syncBackspace();
-  }, HOLD_MS);
-});
-backspaceBtn.addEventListener('pointerup', () => {
-  if (!holdTimer && heldLong) return; // já limpou ao segurar
-  cancelHold();
-  if (!heldLong) {
-    dialInput.value = dialInput.value.slice(0, -1);
-    syncBackspace();
-  }
-});
-backspaceBtn.addEventListener('pointerleave', cancelHold);
-backspaceBtn.addEventListener('pointercancel', cancelHold);
-backspaceBtn.addEventListener('contextmenu', (e) => e.preventDefault());
-dialInput.addEventListener('input', syncBackspace);
-syncBackspace();
+const syncBackspace = wireBackspace($<HTMLButtonElement>('backspace-btn'), dialInput);
 
 callBtn.addEventListener('click', () => {
   const number = dialInput.value.trim();
@@ -320,27 +312,46 @@ dtmfBtn.addEventListener('click', () => {
   dtmfPad.hidden = !dtmfPad.hidden;
   if (!dtmfPad.hidden) dtmfPad.scrollIntoView({ block: 'nearest' });
 });
+const syncXferBackspace = wireBackspace($<HTMLButtonElement>('transfer-backspace'), transferInput);
+function closeTransfer(): void {
+  transferInput.value = '';
+  syncXferBackspace();
+  transferPanel.hidden = true;
+}
 $('transfer-btn').addEventListener('click', () => {
   dtmfPad.hidden = true;
-  transferPanel.hidden = !transferPanel.hidden;
-  if (!transferPanel.hidden) {
-    transferPanel.scrollIntoView({ block: 'nearest' });
-    transferInput.focus();
-  }
+  if (!transferPanel.hidden) { closeTransfer(); return; }
+  transferPanel.hidden = false;
+  transferInput.focus();
 });
+$('transfer-cancel').addEventListener('click', closeTransfer);
+transferInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('transfer-do').click(); });
+
+// Teclado da transferência: mesmo layout do teclado inicial (dígitos + letras).
+const PAD: [string, string][] = [
+  ['1', ''], ['2', 'ABC'], ['3', 'DEF'], ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'],
+  ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'], ['*', ''], ['0', '+'], ['#', ''],
+];
+const transferPad = $('transfer-pad');
+for (const [d, letters] of PAD) {
+  const b = document.createElement('button');
+  b.className = 'key';
+  b.innerHTML = `<b>${d}</b><s>${letters}</s>`;
+  b.addEventListener('pointerdown', (e) => e.preventDefault()); // mantém o foco no campo
+  b.addEventListener('click', () => { transferInput.value += d; syncXferBackspace(); });
+  transferPad.appendChild(b);
+}
 $('transfer-do').addEventListener('click', () => {
   const dest = transferInput.value.trim();
   if (!dest) return;
   action('blindTransfer', undefined, dest);
-  transferInput.value = '';
-  transferPanel.hidden = true;
+  closeTransfer();
 });
 $('consult-btn').addEventListener('click', () => {
   const dest = transferInput.value.trim();
   if (!dest) return;
   action('consult', undefined, dest);
-  transferInput.value = '';
-  transferPanel.hidden = true;
+  closeTransfer();
 });
 $('complete-transfer-btn').addEventListener('click', () => action('completeTransfer'));
 $('cancel-transfer-btn').addEventListener('click', () => action('cancelTransfer'));
