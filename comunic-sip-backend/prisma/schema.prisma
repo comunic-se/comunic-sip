@@ -1,0 +1,155 @@
+// Schema do Comunic.SIP — fundação multi-tenant + RBAC.
+// Ver claude/arquitetura-comunic-voz.md e claude/painel-gestao-rbac.md.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Um registro por Yeastar. Segredos cifrados (AES-256-GCM) — nunca em texto puro.
+model Pbx {
+  id              String    @id @default(uuid())
+  name            String
+  baseUrl         String    @map("base_url")
+  clientIdEnc     String?   @map("client_id_enc")
+  clientSecretEnc String?   @map("client_secret_enc")
+  sdkAccessId     String    @map("sdk_access_id")
+  sdkAccessKeyEnc String    @map("sdk_access_key_enc")
+  sn              String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  companies       Company[]
+
+  @@map("pbx")
+}
+
+// Tenant = empresa Helena. id = companyId/tenantId do agent/me.
+model Company {
+  id                String           @id
+  name              String
+  pbxId             String           @map("pbx_id")
+  pbx               Pbx              @relation(fields: [pbxId], references: [id])
+  helenaApiTokenEnc String?          @map("helena_api_token_enc")
+  partnerId         String?          @map("partner_id")
+  active            Boolean          @default(true)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  ranges            ExtensionRange[]
+  links             ExtensionLink[]
+
+  @@index([partnerId])
+  @@map("company")
+}
+
+// Faixa de ramais liberada para a empresa (num PBX compartilhado).
+model ExtensionRange {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id])
+  fromExt   String  @map("from_ext")
+  toExt     String  @map("to_ext")
+
+  @@map("extension_range")
+}
+
+// Vínculo usuário Helena -> ramal.
+model ExtensionLink {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  company         Company  @relation(fields: [companyId], references: [id])
+  helenaUserId    String   @map("helena_user_id")
+  extensionNumber String   @map("extension_number")
+  createdBy       String?  @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, helenaUserId])
+  @@unique([companyId, extensionNumber])
+  @@map("extension_link")
+}
+
+// DID -> empresa, para atribuir chamadas recebidas não atendidas.
+model DidRoute {
+  id        String @id @default(uuid())
+  pbxId     String @map("pbx_id")
+  didNumber String @map("did_number")
+  companyId String @map("company_id")
+
+  @@unique([pbxId, didNumber])
+  @@map("did_route")
+}
+
+model Call {
+  id              String    @id @default(uuid())
+  pbxId           String?   @map("pbx_id")
+  companyId       String?   @map("company_id")
+  uid             String?
+  callId          String?   @map("call_id")
+  startedAt       DateTime? @map("started_at")
+  direction       String?
+  status          String?
+  fromNumber      String?   @map("from_number")
+  toNumber        String?   @map("to_number")
+  extensionNumber String?   @map("extension_number")
+  helenaUserId    String?   @map("helena_user_id")
+  departmentIds   String[]  @map("department_ids")
+  contactId       String?   @map("contact_id")
+  callDuration    Int?      @map("call_duration")
+  talkDuration    Int?      @map("talk_duration")
+  recordingFile   String?   @map("recording_file")
+  trunk           String?
+  did             String?
+  raw             Json?
+
+  @@index([companyId, startedAt])
+  @@index([companyId, helenaUserId])
+  @@map("calls")
+}
+
+model ContactCache {
+  companyId       String   @map("company_id")
+  helenaContactId String   @map("helena_contact_id")
+  name            String?
+  phoneE164       String?  @map("phone_e164")
+  email           String?
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@id([companyId, helenaContactId])
+  @@map("contacts_cache")
+}
+
+// Papéis de PLATAFORMA e PARCEIRO (o Helena não tem esse conceito).
+// Empresa/Setor/Agente são derivados do agent/me em tempo de login.
+model PlatformRole {
+  id           String   @id @default(uuid())
+  helenaUserId String   @map("helena_user_id")
+  role         String // SUPER_ADMIN | PARTNER_ADMIN
+  partnerId    String?  @map("partner_id")
+  createdBy    String?  @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([helenaUserId, role, partnerId])
+  @@map("platform_role")
+}
+
+// Promoção manual a SUPERVISOR etc. dentro de uma empresa (opcional).
+model RoleOverride {
+  companyId    String @map("company_id")
+  helenaUserId String @map("helena_user_id")
+  role         String
+
+  @@id([companyId, helenaUserId])
+  @@map("role_override")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  companyId String?  @map("company_id")
+  actor     String?
+  action    String
+  payload   Json?
+  at        DateTime @default(now())
+
+  @@index([companyId, at])
+  @@map("audit_log")
+}
