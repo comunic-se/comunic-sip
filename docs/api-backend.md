@@ -97,5 +97,11 @@ Usam o **token permanente da empresa** (gravado com `scripts/set-helena-token.mj
 
 Não existe remoção (regra de negócio; a API do Helena também não oferece). Telefone normalizado para `55DDDNUMERO`. Falha no Helena → **502**.
 
+## Diretório de ramais (JWT)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/v1/directory` | Ramais da **própria empresa** do usuário: `{ items: [{ extension, name, me }] }`, em ordem alfabética. Fonte: vínculos atendente → ramal do Comunic.SIP; nomes vindos do Helena (token permanente, cache de 5 min). Sem token do Helena, devolve "Ramal NNNN" como nome. Usado na transferência da extensão |
+
 ## CORS
 Só as origens em `ALLOWED_ORIGINS` (separadas por vírgula). Vazio = nega chamadas de outras origens. A extensão não depende de CORS (usa permissão de host) e o painel é servido pelo próprio backend.

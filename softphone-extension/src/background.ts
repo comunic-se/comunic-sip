@@ -330,6 +330,10 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
         });
         break;
       }
+      case 'DIRECTORY': {
+        sendResponse(await backendContacts('/v1/directory', { method: 'GET' }));
+        return;
+      }
       case 'CONTACTS_SEARCH': {
         sendResponse(await searchContacts(raw.query));
         return;

@@ -316,13 +316,77 @@ const syncXferBackspace = wireBackspace($<HTMLButtonElement>('transfer-backspace
 function closeTransfer(): void {
   transferInput.value = '';
   syncXferBackspace();
+  setXferMode('pad');
   transferPanel.hidden = true;
 }
+
+// ----- Diretório de ramais (aba "Ramais" da transferência) -----
+type DirItem = { extension: string; name: string; me?: boolean };
+const transferDir = $('transfer-dir');
+let directory: DirItem[] | null = null;
+let directoryError = '';
+let xferMode: 'pad' | 'dir' = 'pad';
+
+function setXferMode(mode: 'pad' | 'dir'): void {
+  xferMode = mode;
+  document.querySelectorAll<HTMLElement>('.seg-btn').forEach((b) => b.classList.toggle('active', b.dataset.xmode === mode));
+  $('transfer-pad').hidden = mode !== 'pad';
+  transferDir.hidden = mode !== 'dir';
+  if (mode === 'dir') renderDirectory();
+}
+document.querySelectorAll<HTMLElement>('.seg-btn').forEach((b) =>
+  b.addEventListener('click', () => { setXferMode(b.dataset.xmode as 'pad' | 'dir'); transferInput.focus(); }),
+);
+
+async function loadDirectory(): Promise<void> {
+  directoryError = '';
+  const resp = (await chrome.runtime.sendMessage({ target: 'background', type: 'DIRECTORY' }).catch(() => null)) as
+    { items?: DirItem[]; error?: string } | null;
+  if (resp?.items) directory = resp.items.filter((i) => !i.me);
+  else directoryError = resp?.error || 'Não consegui carregar os ramais.';
+  if (xferMode === 'dir') renderDirectory();
+}
+
+function norm(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function renderDirectory(): void {
+  transferDir.innerHTML = '';
+  const empty = (t: string) => { const p = document.createElement('div'); p.className = 'dir-empty'; p.textContent = t; transferDir.appendChild(p); };
+  if (!directory) { empty(directoryError || 'Carregando ramais…'); return; }
+  const q = norm(transferInput.value.trim());
+  const list = q ? directory.filter((d) => norm(d.name).includes(q) || d.extension.includes(q)) : directory;
+  if (!list.length) { empty(directory.length ? 'Nenhum ramal encontrado.' : 'Nenhum outro ramal na empresa.'); return; }
+  for (const d of list) {
+    const b = document.createElement('button');
+    b.className = 'dir-row' + (transferInput.value.trim() === d.extension ? ' sel' : '');
+    const av = document.createElement('span'); av.className = 'dir-av'; av.textContent = initial(d.name);
+    const nm = document.createElement('span'); nm.className = 'dir-name'; nm.textContent = d.name;
+    const ex = document.createElement('span'); ex.className = 'dir-ext'; ex.textContent = d.extension;
+    b.append(av, nm, ex);
+    b.addEventListener('pointerdown', (e) => e.preventDefault());
+    b.addEventListener('click', () => {
+      transferInput.value = d.extension;
+      syncXferBackspace();
+      renderDirectory();
+    });
+    transferDir.appendChild(b);
+  }
+}
+
+// Digitou letra? Vai pra lista e filtra por nome. Em "Ramais", qualquer digitação filtra.
+transferInput.addEventListener('input', () => {
+  if (xferMode === 'pad' && /[a-zà-ú]/i.test(transferInput.value)) setXferMode('dir');
+  else if (xferMode === 'dir') renderDirectory();
+});
 $('transfer-btn').addEventListener('click', () => {
   dtmfPad.hidden = true;
   if (!transferPanel.hidden) { closeTransfer(); return; }
   transferPanel.hidden = false;
+  setXferMode('pad');
   transferInput.focus();
+  loadDirectory(); // atualiza a lista a cada abertura
 });
 $('transfer-cancel').addEventListener('click', closeTransfer);
 transferInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('transfer-do').click(); });
@@ -341,14 +405,24 @@ for (const [d, letters] of PAD) {
   b.addEventListener('click', () => { transferInput.value += d; syncXferBackspace(); });
   transferPad.appendChild(b);
 }
+/** Destino da transferência: número digitado, ou o ramal do único nome que bate com a busca. */
+function transferDest(): string {
+  const v = transferInput.value.trim();
+  if (!v || /^[0-9*#+]+$/.test(v)) return v;
+  const q = norm(v);
+  const hits = (directory ?? []).filter((d) => norm(d.name).includes(q));
+  if (hits.length === 1) return hits[0].extension;
+  setXferMode('dir'); // vários (ou nenhum): mostra a lista pra escolher
+  return '';
+}
 $('transfer-do').addEventListener('click', () => {
-  const dest = transferInput.value.trim();
+  const dest = transferDest();
   if (!dest) return;
   action('blindTransfer', undefined, dest);
   closeTransfer();
 });
 $('consult-btn').addEventListener('click', () => {
-  const dest = transferInput.value.trim();
+  const dest = transferDest();
   if (!dest) return;
   action('consult', undefined, dest);
   closeTransfer();

@@ -77,6 +77,8 @@ export type ToBackground =
   | { target: 'background'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
   | { target: 'background'; type: 'REQUEST_MIC' }
   | { target: 'background'; type: 'CONTACTS_SEARCH'; query: string }
+  // Diretório de ramais da empresa (transferência)
+  | { target: 'background'; type: 'DIRECTORY' }
   | { target: 'background'; type: 'CONTACT_SAVE'; contact: Contact }
   // offscreen -> background
   | { target: 'background'; type: 'STATUS'; status: RegStatus; detail?: string }

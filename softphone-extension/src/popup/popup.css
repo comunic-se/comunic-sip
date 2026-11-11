@@ -126,6 +126,22 @@ body.in-call .tabbar { display: none; }
 .keypad--compact .key b { font-size: 15px; }
 .keypad--compact .key s { font-size: 7px; height: 8px; }
 .transfer { gap: 6px; }
+.xfer-head { height: 26px; }
+.seg { display: inline-flex; background: var(--panel); border-radius: 999px; padding: 2px; gap: 2px; }
+.seg-btn { border: none; background: transparent; border-radius: 999px; padding: 3px 12px; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg-btn.active { background: #fff; color: var(--action); box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.keypad--compact .key { height: 28px; }
+/* Lista de ramais: mesma altura do teclado, rolagem só dentro dela */
+.xfer-dir { height: 124px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; }
+.xfer-dir::-webkit-scrollbar { width: 5px; }
+.xfer-dir::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.dir-row { display: flex; align-items: center; gap: 9px; border: none; background: transparent; border-radius: 10px; padding: 5px 8px; cursor: pointer; text-align: left; font: inherit; width: 100%; }
+.dir-row:hover { background: var(--panel); }
+.dir-row.sel { background: var(--action-soft); }
+.dir-av { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 999px; background: var(--action-soft); color: var(--action); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.dir-name { flex: 1 1 auto; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dir-ext { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dir-empty { margin: auto; font-size: 12px; color: var(--muted); text-align: center; }
 
 /* Com a transferência aberta: só nome/status no topo; controles e cronômetro somem */
 .overlay:has(#transfer-panel:not([hidden])) .ctrl-grid,

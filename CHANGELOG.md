@@ -5,6 +5,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Transferência com diretório de ramais:** aba "Ramais" com os atendentes da empresa (nome + ramal), busca por nome ou número; teclado completo com apagar na aba "Teclado". Nova rota `GET /v1/directory`.
+- **Discador:** botão de apagar (clique apaga um dígito, segurar limpa tudo); barra de abas oculta durante a ligação.
 - **Módulo Empresas no painel:** cadastrar e editar empresas, PBXs (só SUPER_ADMIN), faixas de ramal e token do Helena; ativar/desativar. Credenciais testadas antes de salvar, segredos cifrados, faixas sem sobreposição no mesmo PBX, auditoria de tudo. Substitui os scripts de seed no dia a dia.
 - **Backend multi-tenant** (Fastify 5 + Prisma 6 + Postgres 16): empresas, PBX, faixas de ramal, vínculos, papéis e auditoria.
 - **Login integrado:** a extensão capta a sessão do Comunic Chat; o backend valida no Helena, aplica o gate de empresa e devolve ramal + assinatura do SDK.

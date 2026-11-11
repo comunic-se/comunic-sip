@@ -23,6 +23,8 @@ Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chr
 
 - **Login integrado:** captura a sessão do Comunic Chat e o backend devolve o ramal + assinatura do SDK. Nenhuma senha de ramal é digitada.
 - **Assinatura com validade:** renovada sozinha 15 min antes de vencer (`chrome.alarms`), sem derrubar chamada em andamento.
+- **Transferência:** abas **Teclado** (igual ao discador, com apagar) e **Ramais** (lista da empresa com busca por nome ou número; digitar uma letra já abre a lista). Se o nome digitado bater com um único ramal, Consultar/Transferir usam esse ramal.
+- **Em ligação:** a barra de abas some.
 - **Chamadas:** discador, receber (toque suave + notificação do Chrome com Atender/Recusar), mudo, espera, DTMF, transferência cega e assistida (consulta), histórico (CDR do ramal).
 - **Contatos:** busca por nome ou número, criar e editar (nome, telefone, e-mail), ligar. **Não há remoção** — por regra de negócio e porque a API do Helena não oferece.
 - **Ponte com o painel:** o painel de gestão (aberto dentro do Comunic Chat, em iframe) pede a sessão à extensão, então o gestor entra sem colar token. O domínio do painel precisa estar em `externally_connectable`.
@@ -50,6 +52,7 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 | `GET_STATUS`, `GET_HISTORY` | popup → background/offscreen | Estado atual e histórico |
 | `REQUEST_MIC` | offscreen → background | Abrir a janela de permissão de microfone |
 | `CONTACTS_SEARCH`, `CONTACT_SAVE` | popup → background | Buscar/salvar contatos (o background chama o backend) |
+| `DIRECTORY` | popup → background | Ramais da empresa para a transferência (`GET /v1/directory`) |
 | `PANEL_SESSION` (externa) | painel → background | O painel pede uma sessão; o background abre `/v1/panel/session` com a sessão captada |
 
 ### O que fica guardado

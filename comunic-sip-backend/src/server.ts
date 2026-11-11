@@ -8,6 +8,7 @@ import { registerAuth, openSession, requireAuth, type PanelToken } from './auth.
 import { registerPanelRoutes } from './routes-panel.js';
 import { registerContactRoutes } from './routes-contacts.js';
 import { registerCompanyRoutes } from './routes-companies.js';
+import { registerDirectoryRoutes } from './routes-directory.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
@@ -17,6 +18,7 @@ await registerAuth(app);
 await registerPanelRoutes(app);
 await registerContactRoutes(app);
 await registerCompanyRoutes(app);
+await registerDirectoryRoutes(app);
 
 app.get('/health', async () => ({ ok: true }));
 
