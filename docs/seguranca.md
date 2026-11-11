@@ -1,0 +1,44 @@
+# Segurança
+
+## Princípios
+1. **Segredos ficam no servidor.** AccessID/AccessKey do Yeastar e tokens permanentes do Helena nunca vão para a extensão nem para o painel.
+2. **Cifra em repouso.** Segredos no banco (chave do Linkus SDK do PBX, token permanente do Helena) são cifrados com AES-256-GCM (`src/crypto.ts`) usando `ENCRYPTION_KEY` (32 bytes em base64). Perder a chave = perder os segredos; troca de chave exige recifrar.
+3. **Gate por empresa.** Só empresas cadastradas e com `active = true` recebem ramal/assinatura ou acessam o painel.
+4. **Menor privilégio (RBAC).** Ver `painel-gestao-rbac.md`.
+5. **Auditoria.** Alterações feitas pelo painel vão para `audit_log`.
+
+## O que nunca fazer
+- Commitar `.env`, tokens, chaves ou dumps de banco. O `.gitignore` cobre `.env`; confira antes de cada commit.
+- Colar tokens em chats, issues ou logs. O token permanente do Helena é gravado só via `scripts/set-helena-token.mjs` (lê da linha de comando local e grava cifrado).
+- Reaproveitar a `ENCRYPTION_KEY` de dev em produção. Gere uma nova no servidor: `openssl rand -base64 32`.
+- Deixar `EXTENSION_JWT_SECRET` vazio em produção (o código usa um segredo de dev como fallback — inaceitável fora da máquina local).
+
+## Sessões e tokens
+| Item | Onde vive | Validade |
+|---|---|---|
+| Sessão Helena captada | `chrome.storage.session` (memória do navegador) | a da sessão do Comunic Chat |
+| JWT do backend | `chrome.storage.session` / memória do painel | 12 h |
+| Token OpenAPI Yeastar | cache em memória no backend | 30 min, renovado com `refresh_token` (24 h). Limite de 8 tokens por app — por isso o cache |
+| Assinatura do SDK | `chrome.storage.local` | hoje sem expiração (`expire_time: 0`) — **pendente** usar validade finita |
+
+## Superfície de ataque e mitigação
+| Risco | Mitigação |
+|---|---|
+| Site malicioso pedir sessão à extensão | `externally_connectable` limitado a `localhost`, `127.0.0.1` e `*.comunic.chat`. **Pendente:** checar `sender.origin` também no handler |
+| CORS aberto | `ALLOWED_ORIGINS` com negação por padrão |
+| Painel embutido por site malicioso (clickjacking) | `/painel` envia `frame-ancestors` liberando só `'self'`, `*.wts.chat` e `*.flw.chat` (`PANEL_FRAME_ANCESTORS`) |
+| Parâmetros do menu do Comunic Chat (Id do usuário/conta) adulterados | não são usados para autenticar; a identidade vem só da sessão validada no Helena |
+| Acesso direto à URL do painel, fora do menu | o backend aplica o RBAC em toda rota; as permissões do menu só escondem o item |
+| Abuso da API Helena | retry com espera em 429; rate limit do Helena é 1000 req / 5 min |
+| Token Yeastar esgotado | cache + refresh em vez de `get_token` por requisição |
+| Usuário de outra empresa ver dados | todas as consultas filtram por `companyId` resolvido do papel; SUPER/PARTNER têm escopo explícito |
+
+## Produção — checklist
+- [ ] HTTPS no proxy reverso, só ele exposto em 80/443.
+- [ ] Postgres sem porta publicada (ou só `127.0.0.1`).
+- [ ] `ENCRYPTION_KEY` e `EXTENSION_JWT_SECRET` novos, guardados no cofre (Vaultwarden).
+- [ ] `ALLOWED_ORIGINS` com o domínio real do painel.
+- [ ] `PANEL_FRAME_ANCESTORS` revisado (domínios do Comunic Chat/whitelabel).
+- [ ] `TRUST_PROXY=true` atrás do proxy.
+- [ ] Backup do banco cifrado e testado.
+- [ ] PBX com certificado válido (WebRTC exige) e IP Restriction da API incluindo o IP do servidor.
