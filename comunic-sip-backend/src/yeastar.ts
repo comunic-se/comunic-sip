@@ -82,7 +82,15 @@ async function signOnce(pbx: PbxCreds, token: string, extension: string, expireT
   return { sign: json?.data?.sign ?? json?.sign, text, status: res.status };
 }
 
-export async function createSignature(pbx: PbxCreds, extension: string, expireTime = 0): Promise<string> {
+/**
+ * Gera a assinatura do Linkus SDK para o ramal.
+ * @param expireTime instante de expiração em epoch (segundos). Obrigatório:
+ *   0 criaria uma assinatura que nunca expira — não usar.
+ */
+export async function createSignature(pbx: PbxCreds, extension: string, expireTime: number): Promise<string> {
+  if (!Number.isFinite(expireTime) || expireTime <= Math.floor(Date.now() / 1000)) {
+    throw new Error('expireTime precisa ser um instante futuro (epoch em segundos)');
+  }
   let r = await signOnce(pbx, await getToken(pbx), extension, expireTime);
   if (!r.sign) {
     // token pode ter sido revogado/expirado no PBX: força um novo e tenta uma vez.

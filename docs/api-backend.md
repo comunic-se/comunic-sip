@@ -25,9 +25,12 @@ Nas duas rotas o corpo é `{ "helenaToken": "<sessão do Comunic Chat>" }`. O ba
   "user": { "userId": "...", "companyId": "...", "name": "..." },
   "extension": "4004",
   "pbxUrl": "https://pbx.exemplo.com:8088",
-  "sign": "<assinatura do Linkus SDK>"
+  "sign": "<assinatura do Linkus SDK>",
+  "signExpiresAt": 1794470400
 }
 ```
+`signExpiresAt` é o vencimento da assinatura em epoch (segundos), definido por `SIGN_TTL_SECONDS` (padrão 12 h). A extensão renova antes disso chamando esta mesma rota.
+
 | Código | Quando |
 |---|---|
 | 400 | `helenaToken` ausente |

@@ -19,7 +19,7 @@
 | Sessão Helena captada | `chrome.storage.session` (memória do navegador) | a da sessão do Comunic Chat |
 | JWT do backend | `chrome.storage.session` / memória do painel | 12 h |
 | Token OpenAPI Yeastar | cache em memória no backend | 30 min, renovado com `refresh_token` (24 h). Limite de 8 tokens por app — por isso o cache |
-| Assinatura do SDK | `chrome.storage.local` | hoje sem expiração (`expire_time: 0`) — **pendente** usar validade finita |
+| Assinatura do SDK | `chrome.storage.local` | `SIGN_TTL_SECONDS` (padrão 12 h). A extensão renova 15 min antes de vencer; se houver chamada em andamento, troca só ao fim dela |
 
 ## Superfície de ataque e mitigação
 | Risco | Mitigação |
@@ -41,4 +41,9 @@
 - [ ] `PANEL_FRAME_ANCESTORS` revisado (domínios do Comunic Chat/whitelabel).
 - [ ] `TRUST_PROXY=true` atrás do proxy.
 - [ ] Backup do banco cifrado e testado.
+
+## Riscos aceitos
+| Item | Por que foi aceito | Quando rever |
+|---|---|---|
+| `npm audit`: 3 alertas altos — na verdade um só, `deepmerge-ts` < 8 ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)), via `prisma` → `@prisma/config` | Afeta só a leitura de arquivos de configuração pela CLI do Prisma (ex.: `migrate deploy`), com arquivos nossos. Nenhuma entrada de usuário chega lá; a API em execução não usa esse código. A correção exige Prisma 7 (versão maior, com mudanças de CLI) | Na migração planejada para Prisma 7 |
 - [ ] PBX com certificado válido (WebRTC exige) e IP Restriction da API incluindo o IP do servidor.

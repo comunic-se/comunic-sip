@@ -25,7 +25,7 @@ Base: `https://<pbx>:<porta-do-portal>` (padrão 8088). Header `User-Agent` obri
 | Uso | Endpoint |
 |---|---|
 | Token OpenAPI | `POST /openapi/v1.0/get_token` / `refresh_token` — com o **AccessID/AccessKey do Linkus SDK** (Integrations > Linkus SDK), guardados no registro `pbx` |
-| Assinatura do SDK | `POST /openapi/v1.0/sign/create` com `{ username: <ramal>, sign_type: "sdk", expire_time }` |
+| Assinatura do SDK | `POST /openapi/v1.0/sign/create` com `{ username: <ramal>, sign_type: "sdk", expire_time }`. **`expire_time` é o instante de expiração em epoch (segundos), não uma duração**; `0` = nunca expira (não usamos) |
 
 ### Regras
 - **Máx. 8 access tokens por aplicação.** O backend guarda o token por PBX e renova com `refresh_token` (`src/yeastar.ts`).
@@ -35,7 +35,6 @@ Base: `https://<pbx>:<porta-do-portal>` (padrão 8088). Header `User-Agent` obri
 
 ### Próximos passos
 - **CDR:** Webhook Event Push (evento 30012) → rota no backend validando `X-Signature` (HMAC-SHA256 do corpo bruto) → tabela `calls`.
-- **Assinatura finita:** `expire_time` > 0 e renovação antes do vencimento.
 
 ## SDK na extensão
 `ys-webrtc-sdk-core` 1.1.0, rodando no offscreen document:

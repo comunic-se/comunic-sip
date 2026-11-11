@@ -49,6 +49,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `HELENA_BASE` | não | API da Helena. Padrão `https://api.wts.chat` |
 | `ALLOWED_ORIGINS` | não | Origens liberadas no CORS, separadas por vírgula. Vazio = nega chamadas cross-origin (a extensão não precisa de CORS; o painel é servido pelo próprio backend). |
 | `TRUST_PROXY` | não | `true` quando a API fica atrás de reverse proxy (lê `X-Forwarded-*`) |
+| `SIGN_TTL_SECONDS` | não | Validade da assinatura do Linkus SDK, em segundos. Padrão `43200` (12 h); mínimo `1800` |
 | `PANEL_FRAME_ANCESTORS` | não | Quem pode embutir o `/painel` em iframe. Padrão `'self' https://*.wts.chat https://*.flw.chat` |
 | `PBX_BASE_URL`, `SDK_ACCESS_ID`, `SDK_ACCESS_KEY` | só p/ o seed | Usadas **apenas** por `scripts/seed-comunic.mjs` para cadastrar o PBX no banco (a chave vai cifrada). A API em si lê o PBX do banco. |
 | `DB_PASSWORD` | produção | Senha do Postgres. **Obrigatória** no `docker-compose.yml` (sem ela a stack não sobe); no dev o padrão é `comunic` |
@@ -71,7 +72,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `rbac.ts` | Papéis, matriz de permissões e resolução do papel efetivo |
 | `helena.ts` | Valida a sessão do usuário (`GET /core/v1/agent/me`) |
 | `helena-admin.ts` | Chamadas com o token **permanente** da empresa: listar agentes, buscar/criar/editar contatos (com retry em 429 e telefone normalizado) |
-| `yeastar.ts` | Token da API Yeastar (cacheado e renovado) e `sign/create` do Linkus SDK |
+| `yeastar.ts` | Token da API Yeastar (cacheado e renovado) e `sign/create` do Linkus SDK (exige vencimento futuro) |
 | `crypto.ts` | Cifra/decifra segredos (AES-256-GCM) |
 | `db.ts` | Cliente Prisma |
 | `routes-panel.ts` | Painel: página `/painel` (com `frame-ancestors`), logo, usuários, faixas e vínculo de ramais |

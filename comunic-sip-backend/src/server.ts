@@ -41,9 +41,12 @@ app.post('/v1/auth/extension', async (req, reply) => {
     if (!pbx) return reply.code(500).send({ error: 'PBX da empresa não configurado' });
 
     const baseUrl = pbx.baseUrl.replace(/\/+$/, '');
+    // expire_time do Yeastar é um TIMESTAMP (epoch em segundos), não uma duração.
+    const signExpiresAt = Math.floor(Date.now() / 1000) + config.signTtlSeconds;
     const sign = await createSignature(
       { baseUrl, accessId: pbx.sdkAccessId, accessKey: decryptSecret(pbx.sdkAccessKeyEnc) },
       link.extensionNumber,
+      signExpiresAt,
     );
 
     return {
@@ -53,6 +56,7 @@ app.post('/v1/auth/extension', async (req, reply) => {
       extension: link.extensionNumber,
       pbxUrl: baseUrl,
       sign,
+      signExpiresAt,
     };
   } catch (e: any) {
     if (e?.code && e?.msg) return reply.code(e.code).send({ error: e.msg });

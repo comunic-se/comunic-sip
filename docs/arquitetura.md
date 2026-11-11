@@ -35,8 +35,9 @@ Telefonia dentro do Comunic Chat (Helena: `wts.chat` / `flw.chat`) usando o PABX
 1. O atendente abre o Comunic Chat. A extensão observa (via `chrome.webRequest`) as requisições para `api.wts.chat`/`api.flw.chat` e guarda o `Authorization: Bearer` em `chrome.storage.session`.
 2. O background chama `POST /v1/auth/extension` no backend com essa sessão.
 3. O backend consulta o Helena (`/core/v1/agent/me`), descobre usuário e empresa, aplica o **gate** (empresa cadastrada e ativa) e procura o vínculo usuário→ramal.
-4. Com o vínculo, pede ao Yeastar uma **assinatura** (`sign/create`, `sign_type: sdk`) para o ramal e devolve `{ token, role, user, extension, pbxUrl, sign }` (JWT de 12 h).
+4. Com o vínculo, pede ao Yeastar uma **assinatura** (`sign/create`, `sign_type: sdk`) válida por `SIGN_TTL_SECONDS` (padrão 12 h) e devolve `{ token, role, user, extension, pbxUrl, sign, signExpiresAt }` (JWT de 12 h).
 5. O offscreen inicia o SDK (`init` → `phone.start()`) e o ramal registra.
+6. **Renovação:** um `chrome.alarms` dispara 15 min antes de `signExpiresAt`; a extensão repete o passo 2 com a sessão guardada e manda a nova assinatura ao offscreen, que reinicia o SDK na hora (sem chamada) ou ao fim da chamada em andamento. Sem sessão do Comunic Chat, tenta de novo a cada 5 min; o próximo Bearer captado também refaz o login.
 
 Credenciais do Yeastar (AccessID/AccessKey) **nunca** saem do servidor.
 
@@ -57,6 +58,5 @@ O gestor clica no menu personalizado do Comunic Chat, que abre `/painel` num ifr
 - **Deploy (opção A):** a stack Comunic.SIP roda separada (API + Postgres próprios) atrás do proxy reverso já existente no host. Ver `implantacao.md`.
 
 ## Limitações conhecidas
-- Assinatura do SDK criada com `expire_time: 0` (não expira). Planejado: validade finita + renovação.
 - CDR para o dashboard ainda não é coletado (planejado via Webhook Event Push, evento 30012).
 - Provisionamento de empresa/PBX pelo painel ainda não existe (feito por scripts).

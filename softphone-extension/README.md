@@ -22,6 +22,7 @@ Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chr
 ## Funcionalidades
 
 - **Login integrado:** captura a sessão do Comunic Chat e o backend devolve o ramal + assinatura do SDK. Nenhuma senha de ramal é digitada.
+- **Assinatura com validade:** renovada sozinha 15 min antes de vencer (`chrome.alarms`), sem derrubar chamada em andamento.
 - **Chamadas:** discador, receber (toque suave + notificação do Chrome com Atender/Recusar), mudo, espera, DTMF, transferência cega e assistida (consulta), histórico (CDR do ramal).
 - **Contatos:** busca por nome ou número, criar e editar (nome, telefone, e-mail), ligar. **Não há remoção** — por regra de negócio e porque a API do Helena não oferece.
 - **Ponte com o painel:** o painel de gestão (aberto dentro do Comunic Chat, em iframe) pede a sessão à extensão, então o gestor entra sem colar token. O domínio do painel precisa estar em `externally_connectable`.
@@ -42,7 +43,8 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 
 | Tipo | De → para | Para quê |
 |---|---|---|
-| `INIT_SDK` / `INIT` | popup/background → offscreen | Iniciar o SDK com ramal, assinatura e URL do PBX |
+| `INIT_SDK` / `INIT` | popup/background → offscreen | Iniciar o SDK com ramal, assinatura e URL do PBX (configuração manual) |
+| `RENEW` | background → offscreen | Nova assinatura (login integrado ou renovação): reinicia o SDK agora, ou ao fim da chamada em andamento |
 | `CALL`, `CALL_ACTION` | popup → background → offscreen | Discar; atender, recusar, desligar, mudo, espera, DTMF, transferências |
 | `STATUS`, `CALL_STATE`, `CALL_EVENT` | offscreen → background → popup | Status de registro e estado da chamada |
 | `GET_STATUS`, `GET_HISTORY` | popup → background/offscreen | Estado atual e histórico |
@@ -53,12 +55,12 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 ### O que fica guardado
 | Onde | Chave | Conteúdo |
 |---|---|---|
-| `chrome.storage.local` | `backendUrl`, `pbxURL`, `extension`, `signature` | Configuração do ramal |
+| `chrome.storage.local` | `backendUrl`, `pbxURL`, `extension`, `signature`, `signExpiresAt` | Configuração do ramal e vencimento da assinatura (epoch, segundos) |
 | `chrome.storage.session` (só memória, some ao fechar o navegador) | `helenaToken` | Último token de sessão do Comunic Chat captado |
 | `chrome.storage.session` | `panelJwt` | JWT do backend (12 h) usado pela aba Contatos |
 
 ### Permissões
-- `offscreen`, `storage`, `notifications`, `webRequest`.
+- `offscreen`, `storage`, `notifications`, `webRequest`, `alarms` (renovação da assinatura).
 - `host_permissions`: `api.wts.chat` e `api.flw.chat` (para captar a sessão).
 - `optional_host_permissions`: pedidas na hora de ativar o login integrado (backend e PBX).
 - `externally_connectable`: `localhost`, `127.0.0.1` e `*.comunic.chat` — quem pode pedir sessão à extensão (o painel).

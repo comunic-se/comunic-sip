@@ -15,6 +15,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Documentação em `docs/`.
 
 ### Alterado
+- **Assinatura do ramal com validade** (`SIGN_TTL_SECONDS`, padrão 12 h) em vez de nunca expirar; a extensão renova sozinha 15 min antes e, se houver chamada, aplica só ao fim dela. O backend recusa gerar assinatura sem vencimento.
 - **Docker (opção A):** compose de produção sem Caddy, Postgres sem porta publicada, API só em `127.0.0.1`, limites de memória e senha do banco obrigatória; `docker-compose.dev.yml` para o Postgres de dev e `docker-compose.proxy.yml` para proxy em container. `Dockerfile` gera o client do Prisma, inclui painel e scripts, roda como usuário `node`, tem healthcheck e aplica as migrations ao subir.
 - Extensão renomeada para **Comunic.Chat**, com ícones e logo oficiais.
 - Popup redesenhado no padrão visual do Comunic Chat (320×420, sem rolagem no teclado e nas telas de chamada).

@@ -27,7 +27,7 @@ Modelo escolhido: **opção A** — o host já tem um proxy reverso (que atende 
 - [x] `Dockerfile` com Prisma, `public/` e `scripts/`, usuário sem privilégio e healthcheck.
 - [x] `docker-compose.yml` da opção A (sem Caddy, Postgres sem porta, API só no loopback, limites de memória).
 - [ ] Testar o build da imagem (`docker compose build`) e uma subida completa.
-- [ ] Assinatura do SDK com validade finita.
+- [x] Assinatura do SDK com validade finita e renovação automática.
 
 ## Operação
 - Logs: `docker compose logs -f api`.

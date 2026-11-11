@@ -103,36 +103,104 @@ function broadcastToPopup(msg: Extract<AnyMessage, { target: 'popup' }>): void {
 // localiza o ramal vinculado e devolve a assinatura — o ramal registra sozinho.
 let lastHelenaAuth = '';
 
-async function loginIntegrado(helenaToken: string): Promise<void> {
+// ---------- Assinatura do SDK com validade ----------
+// O backend devolve signExpiresAt (epoch em segundos). Renovamos 15 min antes
+// de vencer via chrome.alarms (sobrevive à suspensão do service worker).
+const RENEW_ALARM = 'comunic-renew-sign';
+const RENEW_MARGIN_S = 15 * 60;
+const RENEW_RETRY_MIN = 5;
+
+type AuthResponse = { extension: string; pbxUrl: string; sign: string; signExpiresAt?: number; token?: string };
+
+async function backendBase(): Promise<string | null> {
   const { backendUrl } = await chrome.storage.local.get('backendUrl');
-  console.log('[Comunic.SIP][login] token capturado; backendUrl =', backendUrl, '| status =', lastStatus.status);
-  if (!backendUrl) { console.log('[Comunic.SIP][login] sem backendUrl configurado — ignorando'); return; }
-  // Já conectado/conectando? Não refaz.
-  if (lastStatus.status === 'registered' || lastStatus.status === 'connecting') return;
-  console.log('[Comunic.SIP][login] chamando', `${String(backendUrl).replace(/\/+$/, '')}/v1/auth/extension`);
+  return backendUrl ? String(backendUrl).replace(/\/+$/, '') : null;
+}
+
+/** Chama /v1/auth/extension e guarda config, validade e JWT. */
+async function authExtension(base: string, helenaToken: string): Promise<{ ok: true; config: SdkConfig } | { ok: false; status: number; text: string }> {
+  const res = await fetch(`${base}/v1/auth/extension`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ helenaToken }),
+  });
+  if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
+  const data = (await res.json()) as AuthResponse;
+  if (data.token) await chrome.storage.session.set({ panelJwt: data.token });
+  const config: SdkConfig = { pbxURL: data.pbxUrl, extension: data.extension, signature: data.sign };
+  await chrome.storage.local.set({ ...config, signExpiresAt: data.signExpiresAt ?? 0 });
+  scheduleRenewal(data.signExpiresAt ?? 0);
+  return { ok: true, config };
+}
+
+function scheduleRenewal(expiresAt: number): void {
+  chrome.alarms.clear(RENEW_ALARM).catch(() => {});
+  if (!expiresAt) return; // backend antigo / assinatura sem validade
+  const whenMs = Math.max(Date.now() + 60_000, (expiresAt - RENEW_MARGIN_S) * 1000);
+  chrome.alarms.create(RENEW_ALARM, { when: whenMs });
+  console.log('[Comunic.SIP][sign] renovação agendada para', new Date(whenMs).toLocaleString());
+}
+
+/** true se a assinatura salva vence nos próximos 15 min (ou já venceu). */
+async function signatureExpiringSoon(): Promise<boolean> {
+  const { signExpiresAt } = await chrome.storage.local.get('signExpiresAt');
+  if (!signExpiresAt) return false;
+  return Number(signExpiresAt) - RENEW_MARGIN_S <= Date.now() / 1000;
+}
+
+let renewing = false;
+async function renewSignature(): Promise<void> {
+  if (renewing) return;
+  renewing = true;
+  try {
+    const base = await backendBase();
+    const { helenaToken } = await chrome.storage.session.get('helenaToken');
+    if (!base || !helenaToken) {
+      // Sem sessão do Comunic Chat (navegador reaberto?). O próximo Bearer captado
+      // faz o login integrado de novo; até lá, tenta outra vez mais tarde.
+      chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
+      return;
+    }
+    const r = await authExtension(base, String(helenaToken));
+    if (!r.ok) {
+      console.log('[Comunic.SIP][sign] renovação falhou:', r.status);
+      chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
+      return;
+    }
+    await ensureOffscreen();
+    // O offscreen só reinicia o SDK se não houver chamada em andamento.
+    sendToOffscreen({ target: 'offscreen', type: 'RENEW', config: r.config });
+  } catch (e) {
+    console.log('[Comunic.SIP][sign] renovação falhou:', e);
+    chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
+  } finally {
+    renewing = false;
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === RENEW_ALARM) renewSignature();
+});
+
+async function loginIntegrado(helenaToken: string): Promise<void> {
+  const base = await backendBase();
+  if (!base) { console.log('[Comunic.SIP][login] sem backendUrl configurado — ignorando'); return; }
+  // Já conectado/conectando com assinatura válida? Não refaz.
+  if ((lastStatus.status === 'registered' || lastStatus.status === 'connecting') && !(await signatureExpiringSoon())) return;
 
   lastStatus = { status: 'connecting', detail: 'Login integrado…' };
   broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'connecting', detail: 'Login integrado…' });
 
   try {
-    const res = await fetch(`${String(backendUrl).replace(/\/+$/, '')}/v1/auth/extension`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ helenaToken }),
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      lastStatus = { status: 'failed', detail: `Backend ${res.status}` };
-      broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: `Backend ${res.status}: ${txt}` });
+    const r = await authExtension(base, helenaToken);
+    if (!r.ok) {
+      lastStatus = { status: 'failed', detail: `Backend ${r.status}` };
+      broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: `Backend ${r.status}: ${r.text}` });
       return;
     }
-    const data = (await res.json()) as { extension: string; pbxUrl: string; sign: string; token?: string };
-    console.log('[Comunic.SIP][login] backend OK — ramal', data.extension);
-    if (data.token) await chrome.storage.session.set({ panelJwt: data.token });
-    const config = { pbxURL: data.pbxUrl, extension: data.extension, signature: data.sign };
-    await chrome.storage.local.set(config);
+    console.log('[Comunic.SIP][login] backend OK — ramal', r.config.extension);
     await ensureOffscreen();
-    sendToOffscreen({ target: 'offscreen', type: 'INIT', config });
+    sendToOffscreen({ target: 'offscreen', type: 'RENEW', config: r.config });
   } catch (e: any) {
     lastStatus = { status: 'failed', detail: 'Backend inacessível' };
     broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: 'Backend inacessível: ' + String(e?.message ?? e) });
@@ -276,6 +344,7 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
       }
       case 'STATUS': {
         lastStatus = { status: raw.status, detail: raw.detail };
+        if (raw.status === 'failed' && (await signatureExpiringSoon())) renewSignature();
         broadcastToPopup({ target: 'popup', type: 'STATUS', status: raw.status, detail: raw.detail });
         break;
       }

@@ -86,6 +86,8 @@ export type ToBackground =
 // background -> offscreen
 export type ToOffscreen =
   | { target: 'offscreen'; type: 'INIT'; config: SdkConfig }
+  // Assinatura renovada: reinicia o SDK agora, ou ao fim da chamada em andamento.
+  | { target: 'offscreen'; type: 'RENEW'; config: SdkConfig }
   | { target: 'offscreen'; type: 'CALL'; number: string }
   | { target: 'offscreen'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
   | { target: 'offscreen'; type: 'GET_HISTORY' };

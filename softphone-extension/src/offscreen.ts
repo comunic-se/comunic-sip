@@ -82,6 +82,34 @@ function snapshotState(session: any, active: boolean): CallState {
   };
 }
 
+// ---------- Renovação da assinatura ----------
+// A assinatura do SDK expira (backend: SIGN_TTL_SECONDS). O background manda a
+// nova antes do vencimento; reiniciar o SDK derruba a chamada, então só
+// aplicamos quando não há chamada nem consulta em andamento.
+let pendingRenew: SdkConfig | null = null;
+
+function isBusy(): boolean {
+  return Boolean(currentSession || transferState);
+}
+
+function renew(config: SdkConfig): void {
+  if (isBusy()) {
+    console.log('[Comunic.SIP] assinatura renovada; aplico ao fim da chamada');
+    pendingRenew = config;
+    return;
+  }
+  pendingRenew = null;
+  initSdk(config);
+}
+
+function applyPendingRenew(): void {
+  if (!pendingRenew || isBusy()) return;
+  const cfg = pendingRenew;
+  pendingRenew = null;
+  console.log('[Comunic.SIP] aplicando assinatura renovada');
+  initSdk(cfg);
+}
+
 function sendCallState(session: any, active: boolean): void {
   chrome.runtime
     .sendMessage({ target: 'background', type: 'CALL_STATE', state: snapshotState(session, active) })
@@ -89,6 +117,8 @@ function sendCallState(session: any, active: boolean): void {
 }
 
 function sendNoCall(): void {
+  // Chamada acabou: se havia assinatura renovada esperando, aplica agora.
+  setTimeout(applyPendingRenew, 1500);
   chrome.runtime
     .sendMessage({ target: 'background', type: 'CALL_STATE', state: { active: false } })
     .catch(() => { /* sem receptor */ });
@@ -380,7 +410,8 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
     return true; // resposta assíncrona
   }
   switch (raw.type) {
-    case 'INIT': initSdk(raw.config); break;
+    case 'INIT': pendingRenew = null; initSdk(raw.config); break;
+    case 'RENEW': renew(raw.config); break;
     case 'CALL': doCall(raw.number); break;
     case 'CALL_ACTION':
       if (raw.action === 'consult') startConsult(raw.arg ?? '');

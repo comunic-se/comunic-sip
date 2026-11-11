@@ -6,6 +6,9 @@ export const config = {
   trustProxy: (process.env.TRUST_PROXY ?? 'false').toLowerCase() === 'true',
   helenaBase: (process.env.HELENA_BASE ?? 'https://api.wts.chat').replace(/\/+$/, ''),
   extensionJwtSecret: process.env.EXTENSION_JWT_SECRET ?? '',
+  // Validade da assinatura do Linkus SDK, em segundos (padrão 12 h, igual ao JWT).
+  // Mínimo de 30 min: a extensão renova 15 min antes de vencer.
+  signTtlSeconds: Math.max(1800, Number(process.env.SIGN_TTL_SECONDS ?? 43200) || 43200),
   // Origens permitidas no CORS (ex.: chrome-extension://<id>). Vazio = nega cross-origin.
   allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
