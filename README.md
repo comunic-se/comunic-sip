@@ -12,10 +12,10 @@ Produto multi-empresa (multi-tenant) e preparado para whitelabel: hoje atende a 
 |---|---|
 | Softphone (extensão) | Registro automático do ramal ao abrir o Comunic Chat ("login integrado"), ligar, receber (com toque e notificação), mudo, espera, DTMF, transferência cega e assistida, histórico de chamadas |
 | Contatos (extensão) | Buscar por nome ou número, criar e editar (nunca remover), ligar para o contato |
-| Painel de gestão | Abre dentro do Comunic Chat, entrada automática pela extensão (sem senha), vínculo usuário → ramal com validação de faixa |
+| Painel de gestão | Abre dentro do Comunic Chat, entrada automática pela extensão (sem senha), vínculo usuário → ramal com validação de faixa, cadastro de empresas, PBX e faixas |
 | Segurança | Login validado no backend, controle de acesso por papel (RBAC multinível), segredos cifrados no banco, nenhum segredo no navegador |
 
-Em construção: provisionamento de empresas pelo painel, ingestão de CDR (Dashboard, Chamadas, Gravações), deploy em produção. Detalhes em [`CHANGELOG.md`](CHANGELOG.md) e nas limitações de [`docs/arquitetura.md`](docs/arquitetura.md).
+Em construção: ingestão de CDR (Dashboard, Chamadas, Gravações), deploy em produção. Detalhes em [`CHANGELOG.md`](CHANGELOG.md) e nas limitações de [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## Estrutura do repositório
 

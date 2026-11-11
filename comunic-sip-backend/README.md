@@ -77,6 +77,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `db.ts` | Cliente Prisma |
 | `routes-panel.ts` | Painel: página `/painel` (com `frame-ancestors`), logo, usuários, faixas e vínculo de ramais |
 | `routes-contacts.ts` | Contatos (`/v1/contacts`) |
+| `routes-companies.ts` | Módulo Empresas: empresas, PBX, faixas e token do Helena |
 
 Referência completa dos endpoints: [`../docs/api-backend.md`](../docs/api-backend.md).
 

@@ -10,6 +10,18 @@ export interface HelenaAgent {
   departments: { departmentId: string; isAgent?: boolean; isSupervisor?: boolean }[];
 }
 
+/** Confere se o token permanente funciona (lista 1 agente). Não lança. */
+export async function checkHelenaToken(companyApiToken: string): Promise<boolean> {
+  try {
+    const res = await hfetch(`${config.helenaBase}/core/v1/agent?pageNumber=1&pageSize=1`, {
+      headers: { Authorization: `Bearer ${companyApiToken}`, 'Content-Type': 'application/json' },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Lista os agentes/usuários da empresa (paginado). */
 export async function listAgents(companyApiToken: string): Promise<HelenaAgent[]> {
   const out: HelenaAgent[] = [];

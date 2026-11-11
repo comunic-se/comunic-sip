@@ -89,6 +89,35 @@
   .empty-state svg{width:56px;height:56px;color:var(--faint);margin-bottom:14px}
   .empty-state .t{font-weight:700;color:var(--ink);font-size:15px;margin-bottom:4px}
   .appmsg{font-size:13px;margin-top:10px}
+  /* ABAS / MODAL / SWITCH (módulo Empresas) */
+  .tabs{display:inline-flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px}
+  .tab{border:none;background:transparent;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .tab.active{background:var(--blue-soft);color:var(--blue-dark)}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600}
+  .badge.ok{background:var(--green-soft);color:#15803d} .badge.warn{background:var(--amber-soft);color:#b45309} .badge.off{background:var(--line);color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--faint)}
+  dialog.modal{border:none;border-radius:14px;padding:0;width:min(520px,calc(100vw - 32px));box-shadow:0 20px 50px rgba(15,23,42,.25);color:var(--body)}
+  dialog.modal::backdrop{background:rgba(15,23,42,.35)}
+  .m-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg);border-bottom:1px solid var(--border)}
+  .m-title{font-weight:700;font-size:15px;color:var(--ink)}
+  .m-close{width:32px;height:32px;border:none;border-radius:999px;background:#e2e8f0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
+  .m-body{padding:18px 20px;display:grid;gap:12px;max-height:calc(100vh - 200px);overflow-y:auto}
+  .m-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
+  .lbl{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  select.field{appearance:auto;padding:0 10px}
+  .switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600}
+  .switch input{display:none}
+  .switch .trk{width:38px;height:22px;border-radius:999px;background:#cbd5e1;position:relative;transition:.15s}
+  .switch .trk::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:999px;background:#fff;transition:.15s}
+  .switch input:checked+.trk{background:var(--blue)} .switch input:checked+.trk::after{left:19px}
+  .range-list{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--blue-softer);color:var(--blue-dark);border-radius:999px;padding:4px 6px 4px 10px;font-size:12.5px;font-weight:600}
+  .chip button{border:none;background:transparent;color:var(--blue-dark);cursor:pointer;font-size:14px;line-height:1;padding:0 4px;border-radius:999px}
+  .chip button:hover{background:var(--blue-soft)}
+  .range-add{display:flex;gap:6px;align-items:center}
+  .range-add input{width:90px}
 </style>
 </head>
 <body>
@@ -158,9 +187,63 @@
 
         <!-- EMPRESAS -->
         <section class="view" data-view="empresas" hidden>
-          <div class="page-head"><div><h1 class="page-title">Empresas</h1><div class="page-sub">Provisionamento de tenants</div></div></div>
-          <div class="card"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg><div class="t">Em breve</div><div>Cadastro e ativação de empresas pelo painel (fatia 2).</div></div></div>
+          <div class="page-head">
+            <div><h1 class="page-title">Empresas</h1><div class="page-sub">Empresas habilitadas no Comunic.SIP, PBX e faixas de ramal</div></div>
+            <div class="row-actions">
+              <div class="tabs" id="emp-tabs"><button class="tab active" data-tab="companies">Empresas</button><button class="tab" data-tab="pbx" id="tab-pbx" hidden>PBX</button></div>
+              <button class="btn" id="emp-new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4.5v15m7.5-7.5h-15"/></svg><span id="emp-new-lbl">Nova empresa</span></button>
+            </div>
+          </div>
+          <div id="emp-pane-companies">
+            <div class="toolbar">
+              <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="emp-search" placeholder="Buscar empresa…" autocomplete="off" /></div>
+            </div>
+            <div class="card">
+              <table><thead><tr><th>Empresa</th><th>PBX</th><th>Faixas</th><th>Ramais</th><th>Token Helena</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+              <tbody id="emp-rows"><tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr></tbody></table>
+            </div>
+          </div>
+          <div id="emp-pane-pbx" hidden>
+            <div class="card">
+              <table><thead><tr><th>PBX</th><th>URL</th><th>AccessID</th><th>Empresas</th><th style="text-align:right">Ações</th></tr></thead>
+              <tbody id="pbx-rows"></tbody></table>
+            </div>
+          </div>
+          <div class="appmsg err" id="emp-msg"></div>
         </section>
+
+        <!-- Modal: empresa -->
+        <dialog class="modal" id="dlg-company">
+          <div class="m-head"><div class="m-title" id="dc-title">Nova empresa</div><button class="m-close" data-close>×</button></div>
+          <div class="m-body">
+            <div id="dc-id-wrap"><label class="lbl" for="dc-id">ID da conta no Comunic Chat *</label><input class="field" id="dc-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off"><div class="hint">O mesmo "Id da conta" dos parâmetros do menu personalizado.</div></div>
+            <div><label class="lbl" for="dc-name">Nome *</label><input class="field" id="dc-name" autocomplete="off"></div>
+            <div><label class="lbl" for="dc-pbx">PBX *</label><select class="field" id="dc-pbx"></select></div>
+            <div id="dc-partner-wrap"><label class="lbl" for="dc-partner">ID do parceiro (whitelabel)</label><input class="field" id="dc-partner" placeholder="opcional" autocomplete="off"></div>
+            <div id="dc-range-new"><label class="lbl">Faixa de ramais</label><div class="row2"><input class="field" id="dc-from" placeholder="de (ex.: 4100)" inputmode="numeric"><input class="field" id="dc-to" placeholder="até (ex.: 4199)" inputmode="numeric"></div></div>
+            <div id="dc-range-edit" hidden><label class="lbl">Faixas de ramais</label><div class="range-list" id="dc-ranges"></div>
+              <div class="range-add" style="margin-top:8px"><input class="field" id="dc-add-from" placeholder="de" inputmode="numeric"><input class="field" id="dc-add-to" placeholder="até" inputmode="numeric"><button class="act" id="dc-add-range">Adicionar</button></div></div>
+            <div><label class="lbl" for="dc-token">Token permanente do Helena</label><input class="field" id="dc-token" type="password" autocomplete="new-password" placeholder="pn_…"><div class="hint" id="dc-token-hint">Usado para listar atendentes e para a aba Contatos. Fica cifrado e não é exibido de novo.</div></div>
+            <div class="err" id="dc-msg"></div>
+          </div>
+          <div class="m-foot"><label class="switch" style="margin-right:auto"><input type="checkbox" id="dc-active" checked><span class="trk"></span>Ativa</label><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="dc-save">Salvar</button></div>
+        </dialog>
+
+        <!-- Modal: PBX -->
+        <dialog class="modal" id="dlg-pbx">
+          <div class="m-head"><div class="m-title" id="dp-title">Novo PBX</div><button class="m-close" data-close>×</button></div>
+          <div class="m-body">
+            <div><label class="lbl" for="dp-name">Nome *</label><input class="field" id="dp-name" autocomplete="off"></div>
+            <div><label class="lbl" for="dp-url">URL do PBX *</label><input class="field" id="dp-url" placeholder="https://pbx.exemplo.com:8088" autocomplete="off"></div>
+            <div class="row2">
+              <div><label class="lbl" for="dp-aid">AccessID *</label><input class="field" id="dp-aid" autocomplete="off"></div>
+              <div><label class="lbl" for="dp-akey">AccessKey *</label><input class="field" id="dp-akey" type="password" autocomplete="new-password"></div>
+            </div>
+            <div class="hint" id="dp-hint">Linkus SDK → Integrações no portal do PBX. As credenciais são testadas antes de salvar; a chave fica cifrada.</div>
+            <div class="err" id="dp-msg"></div>
+          </div>
+          <div class="m-foot"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="dp-save">Salvar</button></div>
+        </dialog>
       </main>
     </div>
   </div>
@@ -225,6 +308,7 @@ function switchView(name){
   document.querySelectorAll('.view').forEach(s=>{s.hidden=s.dataset.view!==name;});
   $('.main').scrollTop=0;
   if(name==='ramais') loadRamais();
+  if(name==='empresas') loadEmpresas();
 }
 document.querySelectorAll('.nav-item').forEach(it=>it.addEventListener('click',()=>switchView(it.dataset.view)));
 
@@ -271,6 +355,154 @@ async function loadRamais(){
     $('#ram-msg').textContent=e.message;
   }
 }
+
+/* ---------- Empresas ---------- */
+let EMP_TAB='companies', COMPANIES=[], PBXS=[], EDIT_CO=null, EDIT_PBX=null;
+const isSuper=()=>ROLE==='SUPER_ADMIN';
+const empty=(n,t)=>'<tr><td colspan="'+n+'" class="muted" style="padding:20px;text-align:center">'+t+'</td></tr>';
+document.querySelectorAll('dialog [data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+document.querySelectorAll('#emp-tabs .tab').forEach(t=>t.onclick=()=>setEmpTab(t.dataset.tab));
+$('#emp-search').addEventListener('input',renderCompanies);
+$('#emp-new').onclick=()=>EMP_TAB==='pbx'?openPbx(null):openCompany(null);
+
+function setEmpTab(tab){
+  EMP_TAB=tab;
+  document.querySelectorAll('#emp-tabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  $('#emp-pane-companies').hidden=tab!=='companies'; $('#emp-pane-pbx').hidden=tab!=='pbx';
+  $('#emp-new-lbl').textContent=tab==='pbx'?'Novo PBX':'Nova empresa';
+}
+async function loadEmpresas(){
+  $('#emp-msg').textContent=''; $('#tab-pbx').hidden=!isSuper();
+  if(!isSuper()&&EMP_TAB==='pbx') setEmpTab('companies');
+  $('#emp-rows').innerHTML=empty(7,'Carregando…');
+  try{
+    [COMPANIES,PBXS]=await Promise.all([api('/v1/panel/companies'),api('/v1/panel/pbx')]);
+    renderCompanies(); renderPbx();
+  }catch(e){$('#emp-rows').innerHTML='';$('#emp-msg').textContent=e.message;}
+}
+function renderCompanies(){
+  const q=($('#emp-search').value||'').trim().toLowerCase();
+  const list=q?COMPANIES.filter(c=>c.name.toLowerCase().includes(q)||c.id.includes(q)):COMPANIES;
+  const rows=$('#emp-rows');
+  if(!list.length){rows.innerHTML=empty(7,COMPANIES.length?'Nenhuma empresa encontrada.':'Nenhuma empresa cadastrada.');return;}
+  rows.innerHTML='';
+  for(const c of list){
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td><div class="u-name">'+esc(c.name)+'</div><div class="mono">'+esc(c.id)+'</div></td>'+
+      '<td class="muted">'+esc(c.pbx?.name||'—')+'</td>'+
+      '<td>'+(c.ranges.length?c.ranges.map(r=>esc(r.from+'–'+r.to)).join('<br>'):'<span class="badge warn">Sem faixa</span>')+'</td>'+
+      '<td>'+c.linkedUsers+'</td>'+
+      '<td>'+(c.helenaTokenSet?'<span class="badge ok">Configurado</span>':'<span class="badge warn">Pendente</span>')+'</td>'+
+      '<td><label class="switch"><input type="checkbox" '+(c.active?'checked':'')+'><span class="trk"></span>'+(c.active?'Ativa':'Inativa')+'</label></td>'+
+      '<td><div class="row-actions"><button class="act act-edit">Editar</button></div></td>';
+    const sw=tr.querySelector('input[type=checkbox]');
+    sw.onchange=async()=>{
+      const on=sw.checked;
+      if(!on&&!confirmInline(tr,'Desativar '+c.name+'? Os atendentes perdem o ramal no próximo login.')){sw.checked=true;return;}
+      try{await api('/v1/panel/companies/'+c.id,{method:'PATCH',body:JSON.stringify({active:on})});await loadEmpresas();}
+      catch(e){sw.checked=!on;$('#emp-msg').textContent=e.message;}
+    };
+    tr.querySelector('.act-edit').onclick=()=>openCompany(c);
+    rows.appendChild(tr);
+  }
+}
+// Confirmação sem window.confirm (bloqueada em alguns iframes): 2º clique confirma.
+function confirmInline(tr,msg){
+  if(tr.dataset.confirm==='1'){delete tr.dataset.confirm;return true;}
+  tr.dataset.confirm='1'; $('#emp-msg').textContent=msg+' Clique de novo para confirmar.';
+  setTimeout(()=>{delete tr.dataset.confirm;},6000); return false;
+}
+function renderPbx(){
+  const rows=$('#pbx-rows');
+  if(!PBXS.length){rows.innerHTML=empty(5,'Nenhum PBX cadastrado.');return;}
+  rows.innerHTML='';
+  for(const p of PBXS){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td class="u-name">'+esc(p.name)+'</td><td class="muted">'+esc(p.baseUrl)+'</td><td class="mono">'+esc(p.sdkAccessId||'')+'</td><td>'+p.companies+'</td>'+
+      '<td><div class="row-actions"><button class="act">Editar</button></div></td>';
+    tr.querySelector('.act').onclick=()=>openPbx(p);
+    rows.appendChild(tr);
+  }
+}
+function fillPbxSelect(sel){
+  const s=$('#dc-pbx'); s.innerHTML=PBXS.length?'':'<option value="">Nenhum PBX disponível</option>';
+  for(const p of PBXS){const o=document.createElement('option');o.value=p.id;o.textContent=p.name+' — '+p.baseUrl;s.appendChild(o);}
+  if(sel) s.value=sel;
+}
+function openCompany(c){
+  EDIT_CO=c; $('#dc-msg').textContent='';
+  $('#dc-title').textContent=c?'Editar empresa':'Nova empresa';
+  $('#dc-id-wrap').hidden=!!c; $('#dc-id').value='';
+  $('#dc-name').value=c?c.name:''; fillPbxSelect(c?.pbx?.id);
+  $('#dc-partner-wrap').hidden=!isSuper()||!!c; $('#dc-partner').value='';
+  $('#dc-range-new').hidden=!!c; $('#dc-range-edit').hidden=!c; $('#dc-from').value='';$('#dc-to').value='';
+  $('#dc-token').value='';
+  $('#dc-token-hint').textContent=c&&c.helenaTokenSet?'Já configurado. Preencha só para trocar.':'Usado para listar atendentes e para a aba Contatos. Fica cifrado e não é exibido de novo.';
+  $('#dc-active').checked=c?c.active:true;
+  if(c) renderRanges(c);
+  $('#dlg-company').showModal();
+}
+function renderRanges(c){
+  const box=$('#dc-ranges'); box.innerHTML=c.ranges.length?'':'<span class="muted" style="font-size:12.5px">Nenhuma faixa.</span>';
+  for(const r of c.ranges){
+    const chip=document.createElement('span'); chip.className='chip';
+    chip.innerHTML=esc(r.from+'–'+r.to)+'<button title="Remover faixa">×</button>';
+    chip.querySelector('button').onclick=async()=>{
+      try{await api('/v1/panel/companies/'+c.id+'/ranges/'+r.id,{method:'DELETE'});await refreshEditing();}
+      catch(e){$('#dc-msg').textContent=e.message;}
+    };
+    box.appendChild(chip);
+  }
+}
+async function refreshEditing(){
+  COMPANIES=await api('/v1/panel/companies'); renderCompanies();
+  const c=COMPANIES.find(x=>x.id===EDIT_CO.id); if(c){EDIT_CO=c;renderRanges(c);}
+}
+$('#dc-add-range').onclick=async()=>{
+  $('#dc-msg').textContent='';
+  try{
+    await api('/v1/panel/companies/'+EDIT_CO.id+'/ranges',{method:'POST',body:JSON.stringify({from:$('#dc-add-from').value,to:$('#dc-add-to').value})});
+    $('#dc-add-from').value='';$('#dc-add-to').value=''; await refreshEditing();
+  }catch(e){$('#dc-msg').textContent=e.message;}
+};
+$('#dc-save').onclick=async()=>{
+  const btn=$('#dc-save'); $('#dc-msg').textContent=''; btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    const token=$('#dc-token').value.trim();
+    if(!EDIT_CO){
+      await api('/v1/panel/companies',{method:'POST',body:JSON.stringify({
+        id:$('#dc-id').value, name:$('#dc-name').value, pbxId:$('#dc-pbx').value, partnerId:$('#dc-partner').value||undefined,
+        rangeFrom:$('#dc-from').value||undefined, rangeTo:$('#dc-to').value||undefined,
+        helenaToken:token||undefined, active:$('#dc-active').checked})});
+    }else{
+      await api('/v1/panel/companies/'+EDIT_CO.id,{method:'PATCH',body:JSON.stringify({name:$('#dc-name').value,pbxId:$('#dc-pbx').value,active:$('#dc-active').checked})});
+      if(token) await api('/v1/panel/companies/'+EDIT_CO.id+'/helena-token',{method:'PUT',body:JSON.stringify({token})});
+    }
+    $('#dc-token').value=''; $('#dlg-company').close(); await loadEmpresas();
+  }catch(e){$('#dc-msg').textContent=e.message;}
+  finally{btn.disabled=false;btn.textContent='Salvar';}
+};
+function openPbx(p){
+  EDIT_PBX=p; $('#dp-msg').textContent='';
+  $('#dp-title').textContent=p?'Editar PBX':'Novo PBX';
+  $('#dp-name').value=p?p.name:''; $('#dp-url').value=p?p.baseUrl:''; $('#dp-aid').value=p?(p.sdkAccessId||''):''; $('#dp-akey').value='';
+  $('#dp-hint').textContent=p?'Para trocar URL ou AccessID, informe também o AccessKey. Só o nome? Deixe o AccessKey vazio.':'Linkus SDK → Integrações no portal do PBX. As credenciais são testadas antes de salvar; a chave fica cifrada.';
+  $('#dlg-pbx').showModal();
+}
+$('#dp-save').onclick=async()=>{
+  const btn=$('#dp-save'); $('#dp-msg').textContent=''; btn.disabled=true; btn.textContent='Testando…';
+  try{
+    const body={name:$('#dp-name').value,baseUrl:$('#dp-url').value,sdkAccessId:$('#dp-aid').value,sdkAccessKey:$('#dp-akey').value};
+    if(EDIT_PBX){
+      const patch={name:body.name};
+      if(body.sdkAccessKey||body.baseUrl.replace(/\/+$/,'')!==EDIT_PBX.baseUrl||body.sdkAccessId!==EDIT_PBX.sdkAccessId) Object.assign(patch,{baseUrl:body.baseUrl,sdkAccessId:body.sdkAccessId,sdkAccessKey:body.sdkAccessKey});
+      await api('/v1/panel/pbx/'+EDIT_PBX.id,{method:'PATCH',body:JSON.stringify(patch)});
+    }else await api('/v1/panel/pbx',{method:'POST',body:JSON.stringify(body)});
+    $('#dp-akey').value=''; $('#dlg-pbx').close(); await loadEmpresas();
+  }catch(e){$('#dp-msg').textContent=e.message;}
+  finally{btn.disabled=false;btn.textContent='Salvar';}
+};
 
 tryAuto();
 </script>

@@ -67,6 +67,24 @@ SUPER_ADMIN e PARTNER_ADMIN podem passar `companyId` (corpo ou query) para agir 
 
 Vincular e desvincular gravam `audit_log` (`extension_link` / `extension_unlink`, com autor e payload).
 
+## Painel — empresas e PBX (JWT)
+
+Permissões: `provision_company` (SUPER_ADMIN em todas; PARTNER_ADMIN só nas empresas do seu `partnerId`) e `manage_pbx` (só SUPER_ADMIN). Segredos entram cifrados e **nunca** voltam nas respostas — a API só informa se estão configurados. Toda escrita grava `audit_log`.
+
+| Método | Rota | Permissão | Descrição |
+|---|---|---|---|
+| GET | `/v1/panel/pbx` | `provision_company` | PBXs que o chamador pode atribuir (SUPER: todos; PARTNER: os já usados pelas suas empresas). `sdkAccessId` só para SUPER |
+| POST | `/v1/panel/pbx` | `manage_pbx` | Cria `{ name, baseUrl, sdkAccessId, sdkAccessKey }`. URL precisa ser `https://`. **Testa as credenciais** (`get_token`) antes de salvar |
+| PATCH | `/v1/panel/pbx/:id` | `manage_pbx` | Altera nome; para mudar URL/AccessID é preciso reenviar o `sdkAccessKey` (testado de novo) |
+| GET | `/v1/panel/companies` | `provision_company` | Empresas no escopo: PBX, faixas, nº de ramais vinculados, `helenaTokenSet`, `active` |
+| POST | `/v1/panel/companies` | `provision_company` | Cria `{ id, name, pbxId, partnerId?, rangeFrom?, rangeTo?, helenaToken?, active? }`. `id` = UUID da conta no Comunic Chat. PARTNER cria sempre com o próprio `partnerId`. **409** se já existe |
+| PATCH | `/v1/panel/companies/:id` | `provision_company` | Altera `name`, `active`, `pbxId`. Ninguém desativa a própria empresa |
+| PUT | `/v1/panel/companies/:id/helena-token` | `provision_company` | Grava o token permanente `{ token }` depois de testá-lo no Helena |
+| POST | `/v1/panel/companies/:id/ranges` | `provision_company` | Adiciona faixa `{ from, to }` |
+| DELETE | `/v1/panel/companies/:id/ranges/:rangeId` | `provision_company` | Remove faixa; recusa se houver ramal vinculado que ficaria fora das faixas |
+
+Regras das faixas: só dígitos (2 a 6), início e fim com o mesmo número de dígitos, início ≤ fim, sem sobreposição com outra faixa da mesma empresa nem com faixas de **outras empresas no mesmo PBX**. Não existe exclusão de empresa: desative (`active: false`).
+
 ## Contatos (JWT)
 
 Usam o **token permanente da empresa** (gravado com `scripts/set-helena-token.mjs`). Sem ele → **400**.

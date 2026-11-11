@@ -72,6 +72,15 @@ async function getToken(pbx: PbxCreds, force = false): Promise<string> {
   return newToken(pbx);
 }
 
+/** Testa as credenciais do PBX pedindo um token novo. Não lança. */
+export async function checkPbx(pbx: PbxCreds): Promise<boolean> {
+  try {
+    return Boolean(await getToken(pbx, true));
+  } catch {
+    return false;
+  }
+}
+
 async function signOnce(pbx: PbxCreds, token: string, extension: string, expireTime: number): Promise<{ sign?: string; text: string; status: number }> {
   const res = await fetch(
     `${pbx.baseUrl}/openapi/v1.0/sign/create?access_token=${encodeURIComponent(token)}`,

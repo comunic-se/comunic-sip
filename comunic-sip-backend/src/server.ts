@@ -7,6 +7,7 @@ import { createSignature } from './yeastar.js';
 import { registerAuth, openSession, requireAuth, type PanelToken } from './auth.js';
 import { registerPanelRoutes } from './routes-panel.js';
 import { registerContactRoutes } from './routes-contacts.js';
+import { registerCompanyRoutes } from './routes-companies.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
@@ -15,6 +16,7 @@ await app.register(cors, { origin: config.allowedOrigins.length ? config.allowed
 await registerAuth(app);
 await registerPanelRoutes(app);
 await registerContactRoutes(app);
+await registerCompanyRoutes(app);
 
 app.get('/health', async () => ({ ok: true }));
 

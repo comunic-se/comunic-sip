@@ -64,7 +64,14 @@ Fonte de verdade: `MATRIX` em `src/rbac.ts`. Se divergir desta tabela, vale o c�
 | Dashboard | `view_dashboard` | em breve (depende do CDR) |
 | Chamadas | `view_cdr` | em breve (CDR via webhook 30012) |
 | Gravações | `play_recording` | em breve |
-| Empresas | `provision_company` | em breve (só aparece para SUPER/PARTNER) |
+| Empresas (cadastro, PBX, faixas, token, ativar/desativar) | `provision_company` / `manage_pbx` | **pronto** — só aparece para SUPER/PARTNER; aba PBX só para SUPER |
+
+## Regras do módulo Empresas
+- Nova empresa: ID da conta no Comunic Chat (UUID), nome, PBX, faixa inicial, token do Helena (opcional, pode ser depois) e se já nasce ativa.
+- Credenciais do PBX e token do Helena são **testados antes de salvar** e ficam cifrados; a tela só mostra "Configurado"/"Pendente".
+- Faixas não podem se sobrepor a faixas de outras empresas no mesmo PBX; remover faixa com ramal vinculado é recusado.
+- Desativar uma empresa pede confirmação (segundo clique) e bloqueia o login integrado e o painel dela na próxima sessão. Ninguém desativa a própria empresa.
+- PARTNER_ADMIN só vê e cria empresas do próprio parceiro e só usa PBXs que já atendem suas empresas.
 
 ## Regras do módulo Ramais
 - Só ramais dentro das faixas (`extension_range`) da empresa.
