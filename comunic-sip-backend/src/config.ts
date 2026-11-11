@@ -21,6 +21,7 @@ export function assertConfig(): void {
   if (!process.env.DATABASE_URL) missing.push('DATABASE_URL');
   if (!process.env.ENCRYPTION_KEY) missing.push('ENCRYPTION_KEY');
   if (!config.extensionJwtSecret) missing.push('EXTENSION_JWT_SECRET');
+  console.log(`[config] assinatura do SDK válida por ${Math.round(config.signTtlSeconds / 60)} min (SIGN_TTL_SECONDS)`);
   if (missing.length) {
     console.warn(`[config] Faltando no .env: ${missing.join(', ')} — auth/segredos vão falhar.`);
   }
