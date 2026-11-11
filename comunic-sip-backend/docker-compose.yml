@@ -1,3 +1,14 @@
+# Stack de PRODUÇÃO do Comunic.SIP (opção A): API + Postgres próprios.
+# O proxy reverso que já existe no host (n8n/Vaultwarden) termina o TLS e
+# encaminha o subdomínio para a API. Esta stack NÃO abre 80/443.
+#
+#   docker compose up -d --build
+#
+# Proxy em container (Nginx Proxy Manager, Traefik...): use também
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# Desenvolvimento: use docker-compose.dev.yml (só o Postgres, em 127.0.0.1:5433).
+
 services:
   api:
     build: .
@@ -5,45 +16,34 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8787
+      TRUST_PROXY: "true"
+      DATABASE_URL: postgresql://comunic:${DB_PASSWORD:?defina DB_PASSWORD no .env}@db:5432/comunicsip
+    # Só no loopback do host: quem atende a internet é o proxy.
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    mem_limit: 512m
     restart: unless-stopped
 
   db:
     image: postgres:16-alpine
+    command: ["postgres", "-c", "shared_buffers=128MB"]
     environment:
       POSTGRES_USER: comunic
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-comunic}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
       POSTGRES_DB: comunicsip
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Exponha só se precisar acessar o Postgres de fora (dev).
-    ports:
-      - "127.0.0.1:5433:5432"
-    restart: unless-stopped
-
-  # TLS automático para a VPS. Só sobe com o profile "prod":
-  #   docker compose --profile prod up -d
-  # Precisa de um domínio (DOMAIN no .env) apontando para o IP da VPS, portas 80/443 abertas.
-  caddy:
-    image: caddy:2-alpine
-    profiles: ["prod"]
-    environment:
-      DOMAIN: ${DOMAIN:-localhost}
-    depends_on:
-      - api
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddydata:/data
-      - caddyconfig:/config
+    # Sem porta publicada: o banco só é alcançável pela rede interna da stack.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comunic -d comunicsip"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
     restart: unless-stopped
 
 volumes:
   pgdata:
-  caddydata:
-  caddyconfig:

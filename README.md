@@ -40,7 +40,7 @@ Pré-requisitos: Node 20+, Docker Desktop, Git. No Windows, `docs/setup-ambiente
 cd comunic-sip-backend
 npm install
 copy .env.example .env          # e preencha (veja o README do backend)
-docker compose up -d db         # Postgres em 127.0.0.1:5433
+npm run db:dev                 # Postgres em 127.0.0.1:5433
 npx prisma migrate deploy       # cria as tabelas
 node scripts/seed-comunic.mjs   # PBX, empresa piloto, ramal e SUPER_ADMIN
 npm run dev                     # API em http://localhost:8787

@@ -15,11 +15,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Documentação em `docs/`.
 
 ### Alterado
+- **Docker (opção A):** compose de produção sem Caddy, Postgres sem porta publicada, API só em `127.0.0.1`, limites de memória e senha do banco obrigatória; `docker-compose.dev.yml` para o Postgres de dev e `docker-compose.proxy.yml` para proxy em container. `Dockerfile` gera o client do Prisma, inclui painel e scripts, roda como usuário `node`, tem healthcheck e aplica as migrations ao subir.
 - Extensão renomeada para **Comunic.Chat**, com ícones e logo oficiais.
 - Popup redesenhado no padrão visual do Comunic Chat (320×420, sem rolagem no teclado e nas telas de chamada).
 - Postgres de dev na porta `5433` (a 5432 costuma estar ocupada).
 
 ### Removido
+- `Caddyfile` e o serviço `caddy` (o TLS fica no proxy existente do host).
 - Rota de depuração `/v1/sip/signature` e o mapeamento fixo de ramais por variável de ambiente.
 
 ### Corrigido

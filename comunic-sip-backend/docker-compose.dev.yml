@@ -1,0 +1,23 @@
+# DESENVOLVIMENTO: só o Postgres, publicado em 127.0.0.1:5433
+# (a 5432 costuma estar ocupada por um Postgres local).
+# A API roda fora do Docker com `npm run dev`.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Usa o mesmo volume (pgdata) do projeto, então os dados de dev são preservados.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: comunic
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-comunic}
+      POSTGRES_DB: comunicsip
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -58,6 +58,5 @@ O gestor clica no menu personalizado do Comunic Chat, que abre `/painel` num ifr
 
 ## Limitações conhecidas
 - Assinatura do SDK criada com `expire_time: 0` (não expira). Planejado: validade finita + renovação.
-- `Dockerfile` ainda não gera o client do Prisma (ver `implantacao.md`).
 - CDR para o dashboard ainda não é coletado (planejado via Webhook Event Push, evento 30012).
 - Provisionamento de empresa/PBX pelo painel ainda não existe (feito por scripts).

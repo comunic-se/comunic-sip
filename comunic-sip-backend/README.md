@@ -14,7 +14,7 @@ Stack: Node 20, TypeScript (ESM), Fastify 5, Prisma 6 + PostgreSQL 16, `@fastify
 ```powershell
 npm install
 copy .env.example .env      # preencha conforme a tabela abaixo
-docker compose up -d db     # só o Postgres, em 127.0.0.1:5433
+npm run db:dev             # só o Postgres (docker-compose.dev.yml), em 127.0.0.1:5433
 npx prisma migrate deploy   # cria/atualiza as tabelas
 node scripts/seed-comunic.mjs
 npm run dev                 # tsx watch: recarrega sozinho a cada alteração
@@ -36,6 +36,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `npm run dev` | Sobe a API com `tsx watch` |
 | `npm run build` | Compila TypeScript para `dist/` |
 | `npm start` | Roda `dist/server.js` (produção) |
+| `npm run db:dev` | Sobe o Postgres de desenvolvimento (`docker-compose.dev.yml`) |
 
 ## Variáveis de ambiente (`.env`, nunca versionado)
 
@@ -50,7 +51,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `TRUST_PROXY` | não | `true` quando a API fica atrás de reverse proxy (lê `X-Forwarded-*`) |
 | `PANEL_FRAME_ANCESTORS` | não | Quem pode embutir o `/painel` em iframe. Padrão `'self' https://*.wts.chat https://*.flw.chat` |
 | `PBX_BASE_URL`, `SDK_ACCESS_ID`, `SDK_ACCESS_KEY` | só p/ o seed | Usadas **apenas** por `scripts/seed-comunic.mjs` para cadastrar o PBX no banco (a chave vai cifrada). A API em si lê o PBX do banco. |
-| `DB_PASSWORD` | não | Senha do Postgres do `docker-compose` (padrão `comunic`) |
+| `DB_PASSWORD` | produção | Senha do Postgres. **Obrigatória** no `docker-compose.yml` (sem ela a stack não sobe); no dev o padrão é `comunic` |
 
 ## Scripts de operação (`scripts/`)
 
@@ -102,4 +103,11 @@ npx prisma generate                                  # atualiza o client
 
 ## Docker
 
-`docker-compose.yml` tem três serviços: `db` (Postgres, só em `127.0.0.1:5433`), `api` e `caddy` (perfil `prod`). Para produção leia [`../docs/implantacao.md`](../docs/implantacao.md) — há pendências conhecidas (Prisma e `public/` no `Dockerfile`, remoção do Caddy pela opção A, exposição de portas) listadas lá.
+| Arquivo | Para quê |
+|---|---|
+| `docker-compose.yml` | **Produção (opção A):** `api` + `db`. API só em `127.0.0.1:8787`, Postgres sem porta publicada, `mem_limit` de 512 MB em cada, `DB_PASSWORD` obrigatória. Sem Caddy: o TLS fica no proxy que já existe no host |
+| `docker-compose.proxy.yml` | Complemento quando o proxy roda em container: liga a API à rede do proxy (`PROXY_NETWORK`) |
+| `docker-compose.dev.yml` | **Desenvolvimento:** só o Postgres, em `127.0.0.1:5433` (mesmo volume de dados) |
+| `Dockerfile` | Build em duas etapas; gera o client do Prisma, inclui `public/` (painel) e `scripts/`, roda como usuário `node`, healthcheck em `/health`. **Aplica as migrations pendentes ao subir** (`prisma migrate deploy`) |
+
+O `prisma` (CLI) está em `dependencies` porque o container precisa dele para aplicar as migrations. Passo a passo de produção: [`../docs/implantacao.md`](../docs/implantacao.md).

@@ -1,0 +1,16 @@
+# Complemento para quando o proxy reverso roda em container.
+# Liga a API à rede do proxy; no proxy, aponte o subdomínio para http://api:8787
+# (ou para o nome do container da API).
+#
+#   PROXY_NETWORK=<rede-do-proxy> docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# Descubra o nome da rede com: docker network ls
+
+services:
+  api:
+    networks: [default, proxy]
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?defina PROXY_NETWORK com a rede do proxy}
