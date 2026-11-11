@@ -257,9 +257,48 @@ document.querySelectorAll('.key').forEach((k) => {
       action('dtmf', digit); // em chamada, o teclado manda DTMF
     } else {
       dialInput.value += digit;
+      syncBackspace();
     }
   });
 });
+// ---------- Apagar ----------
+// Clique: apaga o último dígito. Segurar (600 ms): limpa o número inteiro.
+const backspaceBtn = $<HTMLButtonElement>('backspace-btn');
+const HOLD_MS = 600;
+let holdTimer: ReturnType<typeof setTimeout> | undefined;
+let heldLong = false;
+
+function syncBackspace(): void {
+  backspaceBtn.classList.toggle('is-empty', dialInput.value.length === 0);
+}
+function cancelHold(): void {
+  if (holdTimer) clearTimeout(holdTimer);
+  holdTimer = undefined;
+}
+backspaceBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); // não tira o foco do campo
+  heldLong = false;
+  cancelHold();
+  holdTimer = setTimeout(() => {
+    heldLong = true;
+    dialInput.value = '';
+    syncBackspace();
+  }, HOLD_MS);
+});
+backspaceBtn.addEventListener('pointerup', () => {
+  if (!holdTimer && heldLong) return; // já limpou ao segurar
+  cancelHold();
+  if (!heldLong) {
+    dialInput.value = dialInput.value.slice(0, -1);
+    syncBackspace();
+  }
+});
+backspaceBtn.addEventListener('pointerleave', cancelHold);
+backspaceBtn.addEventListener('pointercancel', cancelHold);
+backspaceBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+dialInput.addEventListener('input', syncBackspace);
+syncBackspace();
+
 callBtn.addEventListener('click', () => {
   const number = dialInput.value.trim();
   if (!number) return;

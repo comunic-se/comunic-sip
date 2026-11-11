@@ -98,6 +98,17 @@ main { flex: 1 1 auto; position: relative; overflow: hidden; }
 .call-fab:hover { background: var(--call); }
 .call-fab:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
 .call-fab svg { width: 22px; height: 22px; }
+/* Apagar: clique = 1 dígito; segurar = limpa tudo. Some quando o campo está vazio. */
+.dial-spacer, .backspace-btn { width: 40px; height: 40px; flex: 0 0 40px; }
+.backspace-btn {
+  border: none; border-radius: 999px; background: transparent; color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  -webkit-user-select: none; user-select: none; touch-action: none;
+}
+.backspace-btn:hover { background: #eef2f7; color: #1e293b; }
+.backspace-btn:active { background: var(--action-soft); color: var(--action); }
+.backspace-btn svg { width: 24px; height: 24px; }
+.backspace-btn.is-empty { visibility: hidden; }
 .dial-msg { text-align: center; font-size: 11px; color: var(--hangup); min-height: 14px; margin-top: 6px; }
 
 /* ---------- Ajustes ---------- */
