@@ -15,6 +15,42 @@ let transferState:
   | { customer: any; customerCallId: string; target: string; consultSession: any; consultCallId: string | null }
   | null = null;
 
+// --- Toque de chamada recebida (WebAudio, discreto) ---
+let ringCtx: AudioContext | null = null;
+let ringTimer: ReturnType<typeof setInterval> | null = null;
+
+function startRing(): void {
+  if (ringTimer !== null) return; // já tocando
+  try {
+    ringCtx = ringCtx ?? new AudioContext();
+    if (ringCtx.state === 'suspended') ringCtx.resume().catch(() => { /* */ });
+    const ctx = ringCtx;
+    const chime = () => {
+      const t0 = ctx.currentTime;
+      [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(0, t0 + t);
+        gain.gain.linearRampToValueAtTime(0.06, t0 + t + 0.02); // volume baixo = sutil
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + t + 0.35);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0 + t);
+        osc.stop(t0 + t + 0.4);
+      });
+    };
+    chime();
+    ringTimer = setInterval(chime, 2500);
+  } catch (e) {
+    console.warn('[Comunic.SIP] toque falhou', e);
+  }
+}
+
+function stopRing(): void {
+  if (ringTimer !== null) { clearInterval(ringTimer); ringTimer = null; }
+}
+
 function sendStatus(status: RegStatus, detail?: string): void {
   chrome.runtime
     .sendMessage({ target: 'background', type: 'STATUS', status, detail })
@@ -95,7 +131,7 @@ function wireSession(session: any): void {
     const callStatus = now?.callStatus ?? String(now);
     console.log('[Comunic.SIP] statusChange', callStatus, '(antes:', prev?.callStatus ?? prev, ')');
     sendCallState(session, true);
-    if (callStatus === 'talking') playRemote();
+    if (callStatus === 'talking') { playRemote(); stopRing(); }
   });
   // staticStatusChange também muda mudo/espera/nome — reflete no popup.
   session.on('staticStatusChange', () => sendCallState(session, true));
@@ -150,6 +186,7 @@ async function initSdk(config: SdkConfig): Promise<void> {
       console.log('[Comunic.SIP] evento incoming', callId);
       currentSession = session;
       wireSession(session);
+      startRing();
       sendCallState(session, true);
     });
     phone.on('newRTCSession', ({ callId, session }: any) => {
@@ -171,6 +208,7 @@ async function initSdk(config: SdkConfig): Promise<void> {
     });
     phone.on('deleteSession', ({ callId, cause }: any) => {
       console.log('[Comunic.SIP] evento deleteSession', callId, 'causa:', cause);
+      stopRing();
       currentSession = null;
       if (transferState) {
         const ts = transferState;
@@ -263,10 +301,11 @@ async function doAction(action: CallAction, digit?: string, arg?: string): Promi
   console.log('[Comunic.SIP] ação na chamada:', action, digit ?? arg ?? '');
   switch (action) {
     case 'answer':
+      stopRing();
       if (!(await ensureMic())) return;
       await s.answer?.();
       break;
-    case 'reject': s.reject?.(); break;
+    case 'reject': stopRing(); s.reject?.(); break;
     case 'hangup': s.hangup?.(); break;
     case 'mute': s.mute?.(); sendCallState(s, true); break;
     case 'unmute': s.unmute?.(); sendCallState(s, true); break;

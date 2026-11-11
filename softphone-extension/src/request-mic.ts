@@ -12,3 +12,5 @@ try {
   msg.textContent = 'Não foi possível acessar o microfone: ' + (e?.message ?? String(e));
   msg.className = 'err';
 }
+
+export {};

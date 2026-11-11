@@ -29,6 +29,9 @@ async function copyStatic() {
     copyFile('src/popup/popup.html', `${outdir}/popup.html`),
     copyFile('src/popup/popup.css', `${outdir}/popup.css`),
     copyFile('src/request-mic.html', `${outdir}/request-mic.html`),
+    copyFile('assets/icon-16.png', `${outdir}/icon-16.png`),
+    copyFile('assets/icon-32.png', `${outdir}/icon-32.png`),
+    copyFile('assets/icon-48.png', `${outdir}/icon-48.png`),
     copyFile('assets/icon-128.png', `${outdir}/icon-128.png`),
   ]);
 }

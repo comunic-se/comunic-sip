@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Comunic.SIP</title>
+    <title>Comunic.Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
@@ -11,7 +13,7 @@
       <div class="appbar-main">
         <span id="status-dot" class="dot dot--idle"></span>
         <div class="appbar-text">
-          <span class="appbar-title" id="appbar-title">Comunic.SIP</span>
+          <span class="appbar-title" id="appbar-title">Comunic.Chat</span>
           <span class="appbar-sub" id="status-sub">Desconectado</span>
         </div>
       </div>
@@ -48,17 +50,27 @@
 
       <!-- CONTATOS -->
       <section class="view" id="view-contatos" hidden>
-        <div class="empty">Contatos do Comunic Chat<br />— em breve nesta aba.</div>
+        <div class="ct-top">
+          <input id="ct-search" class="field" type="text" placeholder="Buscar contato…" autocomplete="off" />
+          <button id="ct-new" class="ct-add" title="Novo contato" aria-label="Novo contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div id="ct-list" class="ct-list"></div>
+        <div id="ct-form" class="ct-form" hidden>
+          <div class="ct-form-title" id="ct-form-title">Novo contato</div>
+          <input id="ct-name" class="field" placeholder="Nome" autocomplete="off" />
+          <input id="ct-phone" class="field" type="tel" inputmode="tel" placeholder="Telefone (com DDD)" autocomplete="off" />
+          <input id="ct-email" class="field" type="email" placeholder="E-mail (opcional)" autocomplete="off" />
+          <div class="actions" style="margin-top:4px">
+            <button id="ct-save" class="btn btn--primary" style="margin-top:0">Salvar</button>
+            <button id="ct-cancel" class="btn btn--hangup">Cancelar</button>
+          </div>
+          <p id="ct-msg" class="dial-msg" style="text-align:left"></p>
+        </div>
       </section>
 
       <!-- HISTÓRICO -->
       <section class="view" id="view-historico" hidden>
         <div id="history-list" class="hist-list"></div>
-      </section>
-
-      <!-- MENSAGENS -->
-      <section class="view" id="view-mensagens" hidden>
-        <div class="empty">Mensagens<br />— em breve nesta aba.</div>
       </section>
 
       <!-- AJUSTES -->
@@ -109,7 +121,7 @@
             <span id="mute-label">Mudo</span>
           </button>
           <button id="hold-btn" class="ctrl">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.75 5.25a.75.75 0 01.75.75v12a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75zm-7.5 0A.75.75 0 019 6v12a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg>
             <span id="hold-label">Espera</span>
           </button>
           <button id="dtmf-btn" class="ctrl">
@@ -124,9 +136,9 @@
         <div id="dtmf-pad" class="dtmf" hidden></div>
         <div id="transfer-panel" class="transfer" hidden>
           <input id="transfer-input" class="field" type="tel" inputmode="tel" placeholder="Ramal/número de destino" autocomplete="off" />
-          <div class="actions" style="margin-top:8px;">
-            <button id="consult-btn" class="btn btn--primary">Consultar</button>
-            <button id="transfer-do" class="btn btn--call">Transferir agora</button>
+          <div class="actions">
+            <button id="consult-btn" class="btn btn--ghost">Consultar</button>
+            <button id="transfer-do" class="btn btn--primary">Transferir</button>
           </div>
         </div>
         <div class="actions" id="incall-actions">
@@ -134,8 +146,8 @@
         </div>
         <!-- Modo consulta: concluir ou voltar ao cliente -->
         <div class="actions" id="consult-actions" hidden>
-          <button id="complete-transfer-btn" class="btn btn--call">Concluir transferência</button>
-          <button id="cancel-transfer-btn" class="btn btn--hangup">Voltar ao cliente</button>
+          <button id="cancel-transfer-btn" class="btn btn--ghost">Voltar ao cliente</button>
+          <button id="complete-transfer-btn" class="btn btn--call">Concluir</button>
         </div>
       </div>
     </main>
@@ -152,10 +164,6 @@
       <button class="tab" data-tab="historico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Histórico</span>
-      </button>
-      <button class="tab" data-tab="mensagens">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
-        <span>Mensagens</span>
       </button>
     </nav>
 

@@ -60,6 +60,15 @@ export interface HistoryItem {
   talkDuration?: number;
 }
 
+export interface Contact {
+  id?: string;
+  name: string;
+  phoneNumber?: string;
+  phoneNumberFormatted?: string;
+  email?: string;
+  annotation?: string;
+}
+
 // popup -> background
 export type ToBackground =
   | { target: 'background'; type: 'INIT_SDK'; config: SdkConfig }
@@ -67,6 +76,8 @@ export type ToBackground =
   | { target: 'background'; type: 'CALL'; number: string }
   | { target: 'background'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
   | { target: 'background'; type: 'REQUEST_MIC' }
+  | { target: 'background'; type: 'CONTACTS_SEARCH'; query: string }
+  | { target: 'background'; type: 'CONTACT_SAVE'; contact: Contact }
   // offscreen -> background
   | { target: 'background'; type: 'STATUS'; status: RegStatus; detail?: string }
   | { target: 'background'; type: 'CALL_EVENT'; event: string; call?: CallInfo }

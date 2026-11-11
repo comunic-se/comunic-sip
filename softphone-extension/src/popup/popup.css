@@ -19,12 +19,12 @@
 
 html, body { margin: 0; }
 body {
-  width: 360px;
-  height: 560px;
+  width: 320px;
+  height: 420px;
   display: flex;
   flex-direction: column;
   font-family: Inter, system-ui, -apple-system, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text);
   background: var(--bg);
   overflow: hidden;
@@ -36,150 +36,244 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
-.appbar-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.appbar-main { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .appbar-text { display: flex; flex-direction: column; min-width: 0; }
-.appbar-title { font-weight: 700; color: var(--title); letter-spacing: -0.01em; }
+.appbar-title { font-weight: 700; font-size: 14px; color: var(--title); letter-spacing: -0.01em; }
 .appbar-sub {
   font-size: 11px; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;
 }
-.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--muted); flex: 0 0 auto; }
+.dot { width: 9px; height: 9px; border-radius: 999px; background: var(--muted); flex: 0 0 auto; }
 .dot--idle { background: var(--muted); }
 .dot--connecting { background: var(--amber); }
 .dot--registered { background: var(--call-bright); }
 .dot--failed { background: var(--hangup); }
 
 .icon-btn {
-  width: 34px; height: 34px; border: none; border-radius: 999px;
+  width: 30px; height: 30px; border: none; border-radius: 999px;
   background: transparent; color: var(--muted); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .icon-btn:hover { background: var(--panel); color: var(--title); }
-.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn svg { width: 18px; height: 18px; }
 
 /* ---------- Área central ---------- */
 main { flex: 1 1 auto; position: relative; overflow: hidden; }
-.view { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 14px; overflow-y: auto; }
+.view { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 12px; overflow-y: auto; }
 .view[hidden] { display: none; }
 
-.empty { margin: auto; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.empty { margin: auto; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
 /* ---------- Teclado ---------- */
 .dial-display {
-  width: 100%; height: 44px; text-align: center;
+  width: 100%; height: 38px; text-align: center;
   border: none; border-bottom: 1px solid var(--border);
-  font-size: 24px; font-weight: 600; color: var(--title); letter-spacing: 0.04em;
-  background: transparent; margin-bottom: 14px;
+  font-size: 22px; font-weight: 600; color: var(--title); letter-spacing: 0.04em;
+  background: transparent; margin-bottom: 6px;
 }
 .dial-display:focus { outline: none; border-color: var(--action); }
 
-.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 auto; max-width: 280px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 auto; max-width: 252px; }
 .key {
-  height: 60px; border: none; border-radius: 999px; background: var(--panel);
+  height: 40px; border: none; border-radius: 999px; background: var(--panel);
   cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
   color: var(--title); transition: background 0.1s;
 }
 .key:hover { background: #eef2f7; }
 .key:active { background: var(--action-soft); }
-.key b { font-size: 22px; font-weight: 600; line-height: 1; }
-.key s { font-size: 9px; letter-spacing: 1px; color: var(--muted); text-decoration: none; height: 10px; }
+.key b { font-size: 19px; font-weight: 600; line-height: 1; }
+.key s { font-size: 8px; letter-spacing: 1px; color: var(--muted); text-decoration: none; height: 9px; }
 
-.dial-actions { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 16px; }
+.dial-actions { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 6px; }
 .call-fab {
-  width: 60px; height: 60px; border: none; border-radius: 999px;
+  width: 50px; height: 50px; border: none; border-radius: 999px;
   background: var(--call-bright); color: #fff; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
 }
 .call-fab:hover { background: var(--call); }
 .call-fab:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
-.call-fab svg { width: 26px; height: 26px; }
-.dial-msg { text-align: center; font-size: 12px; color: var(--hangup); min-height: 16px; margin-top: 10px; }
+.call-fab svg { width: 22px; height: 22px; }
+.dial-msg { text-align: center; font-size: 11px; color: var(--hangup); min-height: 14px; margin-top: 6px; }
 
 /* ---------- Ajustes ---------- */
 .field {
-  width: 100%; height: 40px; padding: 0 14px; border: 1px solid var(--border);
+  width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--border);
   border-radius: 10px; font: inherit; color: var(--text); background: #fff;
 }
-.field--area { height: auto; padding: 10px 14px; resize: vertical; }
+.field--area { height: auto; padding: 9px 12px; resize: vertical; }
 .field:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-soft); }
-.label { display: block; margin: 14px 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
+.label { display: block; margin: 12px 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
 .btn {
-  height: 44px; border: none; border-radius: 10px; font: inherit; font-weight: 600;
+  height: 40px; border: none; border-radius: 10px; font: inherit; font-weight: 600;
   color: #fff; cursor: pointer; width: 100%;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn--primary { background: var(--action); margin-top: 18px; }
+.btn--primary { background: var(--action); margin-top: 14px; }
 .btn--primary:hover { background: var(--action-hover); }
 .btn--call { background: var(--call); }
 .btn--hangup { background: var(--hangup); }
 
 /* ---------- Barra de abas ---------- */
 .tabbar {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--border); flex: 0 0 auto; background: #fff;
 }
 .tab {
-  border: none; background: transparent; cursor: pointer; padding: 8px 0 10px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  color: var(--muted); font-size: 11px; font-weight: 500;
+  border: none; background: transparent; cursor: pointer; padding: 6px 0 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--muted); font-size: 10px; font-weight: 500;
 }
-.tab svg { width: 22px; height: 22px; }
+.tab svg { width: 20px; height: 20px; }
 .tab.active { color: var(--action); }
 
 /* ---------- Overlays de chamada ---------- */
 .overlay {
   position: absolute; inset: 0; z-index: 10; background: var(--bg);
-  display: flex; flex-direction: column; padding: 14px 16px; gap: 10px;
+  display: flex; flex-direction: column; padding: 12px 14px; gap: 8px;
   overflow-y: auto;
 }
 .overlay[hidden] { display: none; }
-.call-band { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 4px; }
+.call-band { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 2px; }
 .call-avatar {
-  width: 52px; height: 52px; border-radius: 999px; background: var(--action-soft);
+  width: 44px; height: 44px; border-radius: 999px; background: var(--action-soft);
   color: var(--action); display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 700; margin-bottom: 2px;
+  font-size: 18px; font-weight: 700; margin-bottom: 2px;
 }
-.call-number { font-size: 20px; font-weight: 700; color: var(--title); text-align: center; }
+.call-number { font-size: 18px; font-weight: 700; color: var(--title); text-align: center; }
 .call-sub { font-size: 12px; color: var(--muted); }
 .timer { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--call); font-weight: 600; }
 
-.actions { display: flex; gap: 10px; margin-top: 12px; }
+.actions { display: flex; gap: 10px; margin-top: 10px; }
 .actions .btn { flex: 1; }
 
-.ctrl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
-.transfer { margin-top: 10px; }
+.ctrl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin-top: 4px; }
+.transfer { margin-top: 8px; }
 .ctrl {
-  height: 50px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
-  font: inherit; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  height: 44px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
+  font: inherit; font-size: 11px; font-weight: 600; color: var(--text); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.ctrl svg { width: 20px; height: 20px; }
+.ctrl svg { width: 18px; height: 18px; }
 .ctrl:hover { border-color: var(--action); }
 .ctrl.active { background: var(--amber); color: #fff; border-color: var(--amber); }
 
-.dtmf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dtmf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .dtmf button {
-  height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
-  font: inherit; font-size: 18px; font-weight: 600; color: var(--title); cursor: pointer;
+  height: 40px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
+  font: inherit; font-size: 17px; font-weight: 600; color: var(--title); cursor: pointer;
 }
 .dtmf button:active { background: var(--action-soft); }
 
 /* ---------- Histórico ---------- */
 .hist-list { display: flex; flex-direction: column; }
-.hist-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.hist-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--border); }
 .hist-dir { width: 18px; text-align: center; font-size: 15px; font-weight: 700; flex: 0 0 auto; }
 .hist-main { flex: 1 1 auto; min-width: 0; }
 .hist-name { font-weight: 600; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .hist-call {
-  width: 36px; height: 36px; border: none; border-radius: 999px; flex: 0 0 auto;
+  width: 34px; height: 34px; border: none; border-radius: 999px; flex: 0 0 auto;
   background: #dcfce7; color: var(--call); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .hist-call:hover { background: #bbf7d0; }
-.hist-call svg { width: 18px; height: 18px; }
+.hist-call svg { width: 17px; height: 17px; }
+
+/* Teclado estatico (sem rolagem); contatos e historico rolam. */
+#view-teclado { overflow: hidden; }
+#view-contatos, #view-historico { overflow-y: auto; }
+
+/* ---------- Contatos ---------- */
+.ct-top { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ct-list { display: flex; flex-direction: column; }
+.ct-row { display: flex; align-items: center; gap: 8px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.ct-main { flex: 1 1 auto; min-width: 0; }
+.ct-name { font-weight: 600; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.ct-edit { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--action); cursor: pointer; flex: 0 0 auto; }
+.ct-edit:hover { border-color: var(--action); }
+.ct-form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.ct-form-title { font-weight: 700; color: var(--title); font-size: 13px; }
+
+.ct-add { width: 36px; height: 36px; border: none; border-radius: 999px; background: var(--action); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.ct-add:hover { background: var(--action-hover); }
+.ct-add svg { width: 18px; height: 18px; }
+.ct-iconbtn { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.ct-iconbtn:hover { border-color: var(--action); color: var(--action); }
+.ct-iconbtn svg { width: 16px; height: 16px; }
+
+.ct-form[hidden] { display: none; }
+
+.ct-empty { color: #cbd5e1; }
+.hist-call:disabled { background: #eef2f7; color: #cbd5e1; cursor: not-allowed; }
+.hist-call:disabled:hover { background: #eef2f7; }
+
+/* ---------- Padrão do design system (tela de chamada) ---------- */
+/* hidden sempre vence: .dtmf (grid) e .actions (flex) anulavam o atributo. */
+[hidden] { display: none !important; }
+
+.btn { border-radius: 999px; }
+
+/* Controles da chamada: ícone em círculo + rótulo, 4 por linha */
+.ctrl-grid { grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; }
+.ctrl { height: auto; border: none; background: transparent; padding: 4px 0; gap: 5px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.ctrl svg { width: 44px; height: 44px; padding: 12px; box-sizing: border-box; border-radius: 999px; background: var(--panel); color: var(--title); transition: background .12s; }
+.ctrl:hover { border: none; }
+.ctrl:hover svg { background: #eef2f7; }
+.ctrl.active { background: transparent; color: var(--title); border: none; }
+.ctrl.active svg { background: var(--amber); color: #fff; }
+
+/* DTMF no mesmo estilo do teclado principal, compacto */
+.dtmf { grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 220px; width: 100%; margin: 4px auto 0; }
+.dtmf button { height: 38px; border: none; border-radius: 999px; background: var(--panel); font-size: 17px; }
+.dtmf button:hover { background: #eef2f7; }
+.dtmf button:active { background: var(--action-soft); }
+
+/* ---------- Tela de chamada compacta e alinhada (sem rolagem) ---------- */
+body { font-family: "Inter", "Inter var", system-ui, -apple-system, sans-serif; }
+.overlay { padding: 10px 14px 12px; gap: 8px; scrollbar-width: none; }
+.overlay::-webkit-scrollbar { display: none; }
+.call-band { gap: 1px; margin-top: 0; }
+.call-avatar { width: 40px; height: 40px; font-size: 16px; margin-bottom: 4px; }
+.call-number { font-size: 17px; letter-spacing: -.01em; }
+.call-sub, .timer { font-size: 12px; }
+.ctrl-grid { margin-top: 2px; }
+.ctrl svg { width: 40px; height: 40px; padding: 11px; }
+
+/* Botões: todos pílula, mesma altura, lado a lado com largura igual */
+.actions { margin-top: 2px; gap: 8px; }
+.actions .btn { margin-top: 0; height: 38px; font-size: 13px; white-space: nowrap; flex: 1 1 0; }
+.btn--primary { background: var(--action); }
+.btn--call { background: #16a34a; }
+.btn--call:hover { background: #15803d; }
+.btn--hangup { background: var(--hangup); }
+.btn--hangup:hover { background: #b91c1c; }
+.btn--ghost { background: #fff; border: 1px solid var(--border); color: var(--action); }
+.btn--ghost:hover { border-color: var(--action); background: var(--action-soft); }
+
+/* Transferência: campo pílula + dois botões alinhados */
+.transfer { margin-top: 0; display: flex; flex-direction: column; gap: 8px; }
+.transfer .field { height: 36px; border-radius: 999px; padding: 0 14px; }
+
+/* DTMF compacto */
+.dtmf { gap: 5px; }
+.dtmf button { height: 32px; font-size: 16px; }
+
+/* Com DTMF ou transferência abertos, some o avatar (e o status no DTMF) pra caber sem rolar */
+.overlay:has(#dtmf-pad:not([hidden])) .call-avatar,
+.overlay:has(#transfer-panel:not([hidden])) .call-avatar { display: none; }
+.overlay:has(#dtmf-pad:not([hidden])) .call-sub { display: none; }
+
+/* Barras de rolagem discretas nas listas (Contatos/Histórico) */
+.view::-webkit-scrollbar { width: 6px; }
+.view::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.view::-webkit-scrollbar-track { background: transparent; }
+
+/* DTMF: cabe junto do Desligar sem rolagem */
+.dtmf { gap: 4px; }
+.dtmf button { height: 29px; }

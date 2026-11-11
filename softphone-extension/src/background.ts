@@ -80,7 +80,6 @@ chrome.notifications.onButtonClicked.addListener((id, index) => {
 });
 
 async function ensureOffscreen(): Promise<void> {
-  // @ts-expect-error hasDocument existe em Chrome recente
   const has = await chrome.offscreen.hasDocument?.();
   if (has) return;
   await chrome.offscreen.createDocument({
@@ -127,8 +126,9 @@ async function loginIntegrado(helenaToken: string): Promise<void> {
       broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: `Backend ${res.status}: ${txt}` });
       return;
     }
-    const data = (await res.json()) as { extension: string; pbxUrl: string; sign: string };
+    const data = (await res.json()) as { extension: string; pbxUrl: string; sign: string; token?: string };
     console.log('[Comunic.SIP][login] backend OK — ramal', data.extension);
+    if (data.token) await chrome.storage.session.set({ panelJwt: data.token });
     const config = { pbxURL: data.pbxUrl, extension: data.extension, signature: data.sign };
     await chrome.storage.local.set(config);
     await ensureOffscreen();
@@ -146,6 +146,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     if (val && val.startsWith('Bearer ') && val !== lastHelenaAuth) {
       console.log('[Comunic.SIP][login] Bearer visto em', details.url);
       lastHelenaAuth = val;
+      chrome.storage.session.set({ helenaToken: val.slice(7) }).catch(() => {});
       loginIntegrado(val.slice(7));
     }
   },
@@ -153,6 +154,73 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders', 'extraHeaders'],
 );
 console.log('[Comunic.SIP][login] observador de token ativo');
+
+// ---------- Ponte com o painel de gestão ----------
+// O painel (página servida pelo backend) pede a sessão à extensão, que usa o
+// Bearer já capturado da Helena para abrir a sessão do painel no backend.
+// Assim o gestor não precisa colar token nenhum.
+async function getPanelSession(): Promise<unknown> {
+  const { backendUrl } = await chrome.storage.local.get('backendUrl');
+  const { helenaToken } = await chrome.storage.session.get('helenaToken');
+  if (!backendUrl) return { error: 'backend não configurado na extensão' };
+  if (!helenaToken) return { error: 'sessão do Comunic Chat ainda não captada — abra/atualize o Comunic Chat' };
+  const res = await fetch(`${String(backendUrl).replace(/\/+$/, '')}/v1/panel/session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ helenaToken }),
+  });
+  return res.json();
+}
+
+chrome.runtime.onMessageExternal.addListener((msg: any, _sender, sendResponse) => {
+  if (msg?.type === 'PANEL_SESSION') {
+    getPanelSession().then(sendResponse).catch((e) => sendResponse({ error: String(e?.message ?? e) }));
+    return true; // resposta assíncrona
+  }
+  return undefined;
+});
+
+// ---------- Contatos (via backend) ----------
+// Passa pelo backend, que usa o token permanente da empresa (não expira) e é
+// server-to-server. NUNCA remove (a API da Helena não tem DELETE).
+
+async function ensurePanelJwt(force = false): Promise<string | null> {
+  if (!force) {
+    const { panelJwt } = await chrome.storage.session.get('panelJwt');
+    if (panelJwt) return panelJwt as string;
+  }
+  const sess: any = await getPanelSession();
+  if (sess?.token) { await chrome.storage.session.set({ panelJwt: sess.token }); return sess.token as string; }
+  return null;
+}
+
+async function backendContacts(path: string, init: RequestInit): Promise<any> {
+  const { backendUrl } = await chrome.storage.local.get('backendUrl');
+  if (!backendUrl) return { error: 'backend não configurado' };
+  let jwt = await ensurePanelJwt();
+  if (!jwt) return { error: 'Abra o Comunic Chat para carregar seus contatos.' };
+  const base = String(backendUrl).replace(/\/+$/, '');
+  const call = (t: string) => fetch(`${base}${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}`, ...(init.headers ?? {}) },
+  });
+  let res = await call(jwt);
+  if (res.status === 401) { jwt = await ensurePanelJwt(true); if (jwt) res = await call(jwt); }
+  const text = await res.text();
+  let json: any = null;
+  try { json = text ? JSON.parse(text) : null; } catch { /* */ }
+  if (!res.ok) { console.warn('[Comunic.SIP][contatos] backend', res.status, text); return { error: json?.error || `Backend ${res.status}` }; }
+  return json ?? {};
+}
+
+async function searchContacts(query: string): Promise<any> {
+  return backendContacts(`/v1/contacts?query=${encodeURIComponent(query || '')}`, { method: 'GET' });
+}
+
+async function saveContact(c: any): Promise<any> {
+  if (c.id) return backendContacts(`/v1/contacts/${encodeURIComponent(c.id)}`, { method: 'PUT', body: JSON.stringify(c) });
+  return backendContacts('/v1/contacts', { method: 'POST', body: JSON.stringify(c) });
+}
 
 function notifyIncoming(state: CallState): void {
   if (state.active && state.direction === 'inbound' && (state.callStatus === 'ringing' || state.isRing)) {
@@ -193,6 +261,14 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
           height: 260,
         });
         break;
+      }
+      case 'CONTACTS_SEARCH': {
+        sendResponse(await searchContacts(raw.query));
+        return;
+      }
+      case 'CONTACT_SAVE': {
+        sendResponse(await saveContact(raw.contact));
+        return;
       }
       case 'GET_STATUS': {
         sendResponse({ ...lastStatus, callState: lastCallState });

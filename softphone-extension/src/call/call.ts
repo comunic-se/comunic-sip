@@ -46,8 +46,8 @@ function renderCall(state: CallState): void {
     return;
   }
 
-  const incoming = state.direction === 'inbound'
-    && (state.callStatus === 'ringing' || state.isRing);
+  const incoming = !!(state.direction === 'inbound'
+    && (state.callStatus === 'ringing' || state.isRing));
 
   incomingView.hidden = !incoming;
   incallView.hidden = incoming;

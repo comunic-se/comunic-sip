@@ -1,9 +1,10 @@
-// Popup no estilo Comunic Phone: abas (Teclado/Contatos/Histórico/Mensagens),
+// Popup no estilo Comunic Phone: abas (Teclado/Contatos/Histórico),
 // cabeçalho com status, discador com teclado e telas de chamada.
 import type {
   AnyMessage,
   CallAction,
   CallState,
+  Contact,
   HistoryItem,
   RegStatus,
   SdkConfig,
@@ -11,6 +12,9 @@ import type {
 } from '../shared/messages';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
+
+const PENCIL_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.931-8.931z"/></svg>';
 
 const PHONE_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z"/></svg>';
@@ -38,7 +42,7 @@ const holdLabel = $('hold-label');
 const dtmfBtn = $<HTMLButtonElement>('dtmf-btn');
 const dtmfPad = $('dtmf-pad');
 
-const VIEWS = ['teclado', 'contatos', 'historico', 'mensagens', 'settings'] as const;
+const VIEWS = ['teclado', 'contatos', 'historico', 'settings'] as const;
 type ViewName = (typeof VIEWS)[number];
 
 const STATUS_LABEL: Record<RegStatus, string> = {
@@ -64,6 +68,7 @@ function showView(name: ViewName): void {
     t.classList.toggle('active', (t as HTMLElement).dataset.tab === name);
   });
   if (name === 'historico') loadHistory();
+  if (name === 'contatos') loadContacts();
 }
 
 // ---------- Histórico (CDR) ----------
@@ -183,10 +188,11 @@ function initial(text?: string): string {
 // ---------- Telas de chamada ----------
 function renderCall(state: CallState): void {
   setHeaderForCall(state);
+  if (state.active) dialerMsg.textContent = '';
 
   const active = state.active;
-  const incoming = active && state.direction === 'inbound'
-    && (state.callStatus === 'ringing' || state.isRing);
+  const incoming = !!(active && state.direction === 'inbound'
+    && (state.callStatus === 'ringing' || state.isRing));
   const transferring = !!state.transferring;
 
   incomingView.hidden = !incoming;
@@ -257,6 +263,7 @@ document.querySelectorAll('.key').forEach((k) => {
 callBtn.addEventListener('click', () => {
   const number = dialInput.value.trim();
   if (!number) return;
+  dialerMsg.textContent = '';
   chrome.runtime.sendMessage({ target: 'background', type: 'CALL', number });
 });
 
@@ -370,9 +377,118 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage) => {
   } else if (raw.type === 'CALL_STATE') {
     renderCall(raw.state);
   } else if (raw.type === 'CALL_EVENT') {
-    const info = raw.call?.state ?? raw.call?.number ?? '';
-    if (info) dialerMsg.textContent = `${raw.event}: ${info}`;
+    // Só erros aparecem pro usuário; o andamento já está no cabeçalho e na tela de chamada.
+    if (raw.event === 'error') dialerMsg.textContent = String(raw.call?.state ?? 'Falha na chamada');
   }
+});
+
+// ---------- Contatos ----------
+const ctSearch = $<HTMLInputElement>('ct-search');
+const ctList = $('ct-list');
+const ctForm = $('ct-form');
+const ctFormTitle = $('ct-form-title');
+const ctName = $<HTMLInputElement>('ct-name');
+const ctPhone = $<HTMLInputElement>('ct-phone');
+const ctEmail = $<HTMLInputElement>('ct-email');
+const ctMsg = $('ct-msg');
+let ctEditId: string | undefined;
+let ctSearchTimer: number | undefined;
+
+function openContactForm(c?: Contact): void {
+  ctEditId = c?.id;
+  ctFormTitle.textContent = c?.id ? 'Editar contato' : 'Novo contato';
+  ctName.value = c?.name ?? '';
+  ctPhone.value = c ? contactNumber(c) : '';
+  ctEmail.value = c?.email ?? '';
+  ctMsg.textContent = '';
+  ctForm.hidden = false;
+  ctName.focus();
+}
+function closeContactForm(): void { ctForm.hidden = true; ctEditId = undefined; }
+
+// Número limpo para discar: tira o prefixo "+55|" e deixa só dígitos.
+function contactNumber(c: Contact): string {
+  const raw = c.phoneNumber || '';
+  if (!raw) return '';
+  const national = raw.includes('|') ? (raw.split('|').pop() || '') : raw;
+  return national.replace(/\D/g, '');
+}
+
+function renderContacts(items: Contact[]): void {
+  ctList.innerHTML = '';
+  if (!items.length) { ctList.innerHTML = '<div class="empty">Nenhum contato.</div>'; return; }
+  for (const c of items) {
+    const row = document.createElement('div');
+    row.className = 'ct-row';
+    const main = document.createElement('div');
+    main.className = 'ct-main';
+
+    const nm = document.createElement('div'); nm.className = 'ct-name';
+    nm.textContent = c.name || 'Sem nome';
+
+    const num = contactNumber(c);
+    const ph = document.createElement('div'); ph.className = 'ct-meta';
+    ph.textContent = c.phoneNumberFormatted || num || 'Sem telefone';
+    if (!num) ph.classList.add('ct-empty');
+    main.append(nm, ph);
+
+    if (c.email) {
+      const em = document.createElement('div'); em.className = 'ct-meta';
+      em.textContent = c.email;
+      main.append(em);
+    }
+
+    const editB = document.createElement('button');
+    editB.className = 'ct-iconbtn'; editB.title = 'Editar';
+    editB.innerHTML = PENCIL_SVG;
+    editB.addEventListener('click', () => openContactForm(c));
+
+    const callB = document.createElement('button');
+    callB.className = 'hist-call'; callB.innerHTML = PHONE_SVG;
+    if (num) {
+      callB.title = 'Ligar';
+      callB.addEventListener('click', () => chrome.runtime.sendMessage({ target: 'background', type: 'CALL', number: num }));
+    } else {
+      callB.title = 'Sem telefone cadastrado';
+      callB.disabled = true;
+    }
+
+    row.append(main, editB, callB);
+    ctList.appendChild(row);
+  }
+}
+
+async function loadContacts(): Promise<void> {
+  ctList.innerHTML = '<div class="empty">Carregando…</div>';
+  const resp = (await chrome.runtime.sendMessage({ target: 'background', type: 'CONTACTS_SEARCH', query: ctSearch.value.trim() })) as
+    | { items?: Contact[]; error?: string }
+    | undefined;
+  if (!resp || resp.error) { renderContacts([]); ctList.innerHTML = `<div class="empty">${resp?.error ?? 'Falha ao buscar contatos.'}</div>`; return; }
+  renderContacts(resp.items ?? []);
+}
+
+ctSearch.addEventListener('input', () => {
+  if (ctSearchTimer) clearTimeout(ctSearchTimer);
+  ctSearchTimer = setTimeout(() => loadContacts(), 350) as unknown as number;
+});
+$('ct-new').addEventListener('click', () => openContactForm());
+$('ct-cancel').addEventListener('click', closeContactForm);
+$('ct-save').addEventListener('click', async () => {
+  const contact: Contact = {
+    id: ctEditId,
+    name: ctName.value.trim(),
+    phoneNumber: ctPhone.value.trim(),
+    email: ctEmail.value.trim() || undefined,
+  };
+  if (!contact.name) { ctMsg.textContent = 'Informe o nome.'; return; }
+  if (!contact.phoneNumber) { ctMsg.textContent = 'Informe o telefone.'; return; }
+  ctMsg.textContent = 'Salvando…';
+  const resp = (await chrome.runtime.sendMessage({ target: 'background', type: 'CONTACT_SAVE', contact })) as
+    | { error?: string }
+    | undefined;
+  if (resp && resp.error) { ctMsg.textContent = resp.error; return; }
+  closeContactForm();
+  await loadContacts();
 });
 
 // ---------- Inicialização ----------
