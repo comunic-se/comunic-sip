@@ -1,56 +1,92 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { config, assertConfig } from './config.js';
+import { prisma } from './db.js';
+import { decryptSecret } from './crypto.js';
 import { createSignature } from './yeastar.js';
-import { validateHelenaToken } from './helena.js';
+import { registerAuth, openSession, requireAuth, type PanelToken } from './auth.js';
+import { registerPanelRoutes } from './routes-panel.js';
+import { registerContactRoutes } from './routes-contacts.js';
 
-const app = Fastify({ logger: true });
-await app.register(cors, { origin: true });
+const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
-app.get('/health', async () => ({ ok: true, pbx: config.pbxBaseUrl }));
+// CORS restrito: só as origens em ALLOWED_ORIGINS (vazio = nega cross-origin).
+await app.register(cors, { origin: config.allowedOrigins.length ? config.allowedOrigins : false });
+await registerAuth(app);
+await registerPanelRoutes(app);
+await registerContactRoutes(app);
 
-// Gera a assinatura do SDK para um ramal. Substitui o script manual.
-app.post('/v1/sip/signature', async (req, reply) => {
-  const { extension } = (req.body ?? {}) as { extension?: string };
-  const ext = extension || config.defaultExtension;
-  if (!ext) return reply.code(400).send({ error: 'extension é obrigatório' });
-  try {
-    const sign = await createSignature(ext);
-    return { extension: ext, pbxUrl: config.pbxBaseUrl, sign };
-  } catch (e: any) {
-    req.log.error(e);
-    return reply.code(502).send({ error: String(e?.message ?? e) });
-  }
-});
+app.get('/health', async () => ({ ok: true }));
 
-// Login integrado: valida o token da sessão do Comunic Chat e devolve a
-// configuração do ramal vinculado (ramal + assinatura + PBX).
+// NOTA DE SEGURANÇA: o antigo POST /v1/sip/signature (sem autenticação) foi
+// REMOVIDO. A assinatura só é emitida pelo caminho autenticado + provisionado
+// abaixo. Ver auditoria OWASP (OWASP-A07-001).
+
+// Login integrado da extensão: valida a sessão do Comunic Chat, aplica o gate de
+// provisionamento, acha o ramal vinculado e devolve a assinatura do SDK + token.
 app.post('/v1/auth/extension', async (req, reply) => {
   const { helenaToken } = (req.body ?? {}) as { helenaToken?: string };
   if (!helenaToken) return reply.code(400).send({ error: 'helenaToken é obrigatório' });
-
-  const id = await validateHelenaToken(helenaToken);
-  if (!id) return reply.code(401).send({ error: 'token do Comunic Chat inválido' });
-
-  const ext = config.extensionMap[id.userId] || config.defaultExtension;
-  if (!ext) return reply.code(404).send({ error: 'nenhum ramal vinculado a este usuário' });
-
   try {
-    const sign = await createSignature(ext);
+    const { scope, company, identity, token } = await openSession(
+      helenaToken,
+      (p) => app.jwt.sign(p, { expiresIn: '12h' }),
+    );
+    const link = await prisma.extensionLink.findUnique({
+      where: { companyId_helenaUserId: { companyId: scope.companyId, helenaUserId: scope.userId } },
+    });
+    if (!link) return reply.code(404).send({ error: 'nenhum ramal vinculado a este usuário' });
+
+    const pbx = await prisma.pbx.findUnique({ where: { id: company.pbxId } });
+    if (!pbx) return reply.code(500).send({ error: 'PBX da empresa não configurado' });
+
+    const baseUrl = pbx.baseUrl.replace(/\/+$/, '');
+    const sign = await createSignature(
+      { baseUrl, accessId: pbx.sdkAccessId, accessKey: decryptSecret(pbx.sdkAccessKeyEnc) },
+      link.extensionNumber,
+    );
+
     return {
-      user: { userId: id.userId, companyId: id.companyId, name: id.name },
-      extension: ext,
-      pbxUrl: config.pbxBaseUrl,
+      token,
+      role: scope.role,
+      user: { userId: scope.userId, companyId: scope.companyId, name: identity.name },
+      extension: link.extensionNumber,
+      pbxUrl: baseUrl,
       sign,
     };
   } catch (e: any) {
+    if (e?.code && e?.msg) return reply.code(e.code).send({ error: e.msg });
     req.log.error(e);
-    return reply.code(502).send({ error: String(e?.message ?? e) });
+    return reply.code(502).send({ error: 'falha ao gerar a assinatura' });
   }
 });
 
+// Sessão do painel: mesma validação + gate; devolve papel e escopo (sem ramal).
+app.post('/v1/panel/session', async (req, reply) => {
+  const { helenaToken } = (req.body ?? {}) as { helenaToken?: string };
+  if (!helenaToken) return reply.code(400).send({ error: 'helenaToken é obrigatório' });
+  try {
+    const { scope, company, token } = await openSession(
+      helenaToken,
+      (p) => app.jwt.sign(p, { expiresIn: '12h' }),
+    );
+    return {
+      token,
+      role: scope.role,
+      scope: { companyId: scope.companyId, partnerId: scope.partnerId, departmentIds: scope.departmentIds },
+      company: { id: company.id, name: company.name },
+    };
+  } catch (e: any) {
+    if (e?.code && e?.msg) return reply.code(e.code).send({ error: e.msg });
+    req.log.error(e);
+    return reply.code(500).send({ error: 'falha ao abrir a sessão' });
+  }
+});
+
+// Identidade do token atual (rota protegida de exemplo; Stage 3 adiciona as reais).
+app.get('/v1/me', { preHandler: requireAuth() }, async (req) => ({ user: req.user as PanelToken }));
+
 assertConfig();
-const host = process.env.HOST ?? '0.0.0.0';
-app.listen({ port: config.port, host })
-  .then(() => app.log.info(`Comunic.SIP backend em http://${host}:${config.port}`))
+app.listen({ port: config.port, host: config.host })
+  .then(() => app.log.info(`Comunic.SIP backend em http://${config.host}:${config.port}`))
   .catch((err) => { app.log.error(err); process.exit(1); });
