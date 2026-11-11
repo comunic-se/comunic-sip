@@ -1,0 +1,49 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+    ports:
+      - "8787:8787"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: comunic
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-comunic}
+      POSTGRES_DB: comunicsip
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Exponha só se precisar acessar o Postgres de fora (dev).
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # TLS automático para a VPS. Só sobe com o profile "prod":
+  #   docker compose --profile prod up -d
+  # Precisa de um domínio (DOMAIN no .env) apontando para o IP da VPS, portas 80/443 abertas.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["prod"]
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddydata:/data
+      - caddyconfig:/config
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:

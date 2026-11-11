@@ -50,6 +50,7 @@ app.post('/v1/auth/extension', async (req, reply) => {
 });
 
 assertConfig();
-app.listen({ port: config.port, host: '127.0.0.1' })
-  .then(() => app.log.info(`Comunic.SIP backend em http://127.0.0.1:${config.port}`))
+const host = process.env.HOST ?? '0.0.0.0';
+app.listen({ port: config.port, host })
+  .then(() => app.log.info(`Comunic.SIP backend em http://${host}:${config.port}`))
   .catch((err) => { app.log.error(err); process.exit(1); });

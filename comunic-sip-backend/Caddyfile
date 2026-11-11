@@ -1,0 +1,5 @@
+# Caddy emite e renova o certificado TLS automaticamente para o domínio.
+# Defina DOMAIN no .env (ex.: voz-api.comunic.chat) e aponte o DNS para a VPS.
+{$DOMAIN} {
+    reverse_proxy api:8787
+}
