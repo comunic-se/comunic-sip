@@ -34,6 +34,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Rota de depuração `/v1/sip/signature` e o mapeamento fixo de ramais por variável de ambiente.
 
 ### Corrigido
+- Coleta de chamadas: parava após ~3 h de histórico em PBX movimentado (páginas sobrepostas); agora usa marcador de horário. DID lido do campo `did`. Datas em texto no padrão DD/MM.
+- Coleta gravava chamadas de outros clientes do mesmo PBX; agora só de empresas cadastradas, e a migration `20261112160000_cdr_cursor` apaga as que entraram.
 - "Sair" da sessão de emergência entrava de novo sozinho pela extensão.
 - Aviso de sessão de emergência aparecia em sessão normal (`display:flex` anulava `hidden`).
 - Perfil "Administrador" do Comunic Chat ganhava poder de alteração (qualquer perfil com "ADMIN" virava admin).

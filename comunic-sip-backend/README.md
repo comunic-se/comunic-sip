@@ -52,6 +52,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `SIGN_TTL_SECONDS` | não | Validade da assinatura do Linkus SDK, em segundos. Padrão `43200` (12 h); mínimo `1800` |
 | `CDR_SYNC_ENABLED` / `CDR_SYNC_INTERVAL_S` / `CDR_BACKFILL_DAYS` | não | Coleta de chamadas: liga/desliga (padrão `true`), intervalo (padrão `120` s) e dias de histórico na primeira coleta (padrão `30`) |
 | `PBX_TIMEZONE_OFFSET` | não | Fuso do relógio do PBX para CDR sem timestamp e para os filtros por data. Padrão `-03:00` |
+| `PBX_DATE_ORDER` | não | Ordem da data no texto do CDR quando ambígua: `DMY` (padrão) ou `MDY` |
+| `CDR_STORE_UNASSIGNED` | não | `true` grava também chamadas sem empresa cadastrada (padrão `false`, por minimização de dados) |
 | `PANEL_FRAME_ANCESTORS` | não | Quem pode embutir o `/painel` em iframe. Padrão `'self' https://*.wts.chat https://*.flw.chat` |
 | `PBX_BASE_URL`, `SDK_ACCESS_ID`, `SDK_ACCESS_KEY` | só p/ o seed | Usadas **apenas** por `scripts/seed-comunic.mjs` para cadastrar o PBX no banco (a chave vai cifrada). A API em si lê o PBX do banco. |
 | `DB_PASSWORD` | produção | Senha do Postgres. **Obrigatória** no `docker-compose.yml` (sem ela a stack não sobe); no dev o padrão é `comunic` |
@@ -63,6 +65,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `seed-comunic.mjs` | Prepara o piloto: registra o PBX (chave cifrada), cria a empresa Comunic.se ativa, faixa de ramais 4000–4099 e vincula o Pedro ao ramal 4004. **Não** concede papel de plataforma. Idempotente (pode rodar de novo). Os IDs do piloto estão fixos no arquivo. |
 | `set-helena-token.mjs <companyId> <token>` | Grava, cifrado, o token permanente da API Helena (`pn_...`) de uma empresa. Necessário para listar usuários no painel e para a aba Contatos. Rode no terminal: o token não deve passar por chat, e-mail ou commit. |
 | `papel-plataforma.mjs` | Papéis de plataforma: `listar`, `adicionar <userId> SUPER_ADMIN`, `adicionar <userId> PARTNER_ADMIN <partnerId>`, `remover <userId> <papel>`. Auditado |
+| `diagnostico-cdr.mjs` | Diagnóstico da coleta de chamadas (somente leitura): `node scripts/diagnostico-cdr.mjs --testar-api` |
 | `admin-emergencia.mjs` | Contas de acesso de emergência ao painel: `criar <usuario> <companyId>`, `resetar`, `desativar`, `ativar`, `listar`. Pede a senha sem eco e mostra a chave do autenticador uma única vez |
 | `gerar-assinatura.mjs` | Script antigo de testes manuais da assinatura do SDK. Não é usado pelo fluxo atual. |
 

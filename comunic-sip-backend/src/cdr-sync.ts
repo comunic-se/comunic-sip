@@ -1,9 +1,13 @@
 // Coleta de CDR (histórico de chamadas) pela OpenAPI do Yeastar.
 // A cada CDR_SYNC_INTERVAL_S, para cada PBX com Client ID/Secret da API:
-//   lê v1.0/cdr/list do mais novo para o mais antigo até encontrar o que já existe
-//   (ou chegar a CDR_BACKFILL_DAYS na primeira vez) e grava em `calls`.
+//   lê v1.0/cdr/list do mais novo para o mais antigo até passar do MARCADOR
+//   (horário da chamada mais nova já lida, menos uma margem) — ou até CDR_BACKFILL_DAYS
+//   na primeira vez. Não dá para parar em "achei uma conhecida": num PBX movimentado a
+//   lista anda enquanto paginamos e as páginas se sobrepõem.
 // Cada chamada é associada à EMPRESA (faixa de ramais do PBX, ou DID em did_route) e ao
 // ATENDENTE vinculado ao ramal naquele momento. Idempotente por (pbx_id, uid).
+// MINIMIZAÇÃO (LGPD): o PBX pode ser compartilhado por vários clientes; chamadas sem
+// empresa cadastrada NÃO são gravadas (CDR_STORE_UNASSIGNED=true muda isso).
 import type { FastifyBaseLogger } from 'fastify';
 import { prisma } from './db.js';
 import { decryptSecret } from './crypto.js';
@@ -13,8 +17,13 @@ const INTERVAL_S = Math.max(30, Number(process.env.CDR_SYNC_INTERVAL_S ?? 120) |
 const BACKFILL_DAYS = Math.max(1, Number(process.env.CDR_BACKFILL_DAYS ?? 30) || 30);
 // Fuso do relógio do PBX, usado só quando o CDR não traz timestamp (ex.: -03:00)
 const PBX_TZ = process.env.PBX_TIMEZONE_OFFSET ?? '-03:00';
+// Ordem da data no texto do CDR quando ambígua (12/11): DMY (padrão, Brasil) ou MDY
+const DATE_ORDER = (process.env.PBX_DATE_ORDER ?? 'DMY').toUpperCase() === 'MDY' ? 'MDY' : 'DMY';
 const PAGE_SIZE = 100;
-const MAX_PAGES = 200; // trava de segurança (20 mil chamadas por rodada)
+const MAX_PAGES_BACKFILL = 2000; // 200 mil chamadas no histórico inicial
+const MAX_PAGES_INCREMENTAL = 100;
+const OVERLAP_MS = 15 * 60_000;  // relê 15 min antes do marcador (chamadas longas entram no CDR ao terminar)
+const STORE_UNASSIGNED = (process.env.CDR_STORE_UNASSIGNED ?? 'false').toLowerCase() === 'true';
 
 const running = new Set<string>();
 
@@ -28,8 +37,10 @@ export function parseCdrTime(item: any): Date | null {
   let [, a, b, c, hh, mi, ss] = m;
   let y: string, mo: string, d: string;
   if (a.length === 4) { y = a; mo = b; d = c; }              // YYYY/MM/DD
-  else if (Number(a) > 12) { d = a; mo = b; y = c; }          // DD/MM/YYYY
-  else { mo = a; d = b; y = c; }                              // MM/DD/YYYY (padrão do Yeastar)
+  else if (Number(a) > 12) { d = a; mo = b; y = c; }          // DD/MM/YYYY (sem ambiguidade)
+  else if (Number(b) > 12) { mo = a; d = b; y = c; }          // MM/DD/YYYY (sem ambiguidade)
+  else if (DATE_ORDER === 'MDY') { mo = a; d = b; y = c; }
+  else { d = a; mo = b; y = c; }                              // DD/MM/YYYY (como o PBX da Comunic exibe)
   const iso = `${y.padStart(4, '20')}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T${hh.padStart(2, '0')}:${mi}:${ss ?? '00'}${PBX_TZ}`;
   const dt = new Date(iso);
   return isNaN(+dt) ? null : dt;
@@ -73,7 +84,7 @@ export function mapCdr(pbxId: string, item: any, map: CompanyMap) {
   else { owner = fromCo ? from : toCo ? to : null; other = owner === from && toCo ? to : owner === to && fromCo ? from : null; }
   if (!owner) owner = fromCo ? from : toCo ? to : null;
 
-  const did = String(item.did_number ?? '').trim() || null;
+  const did = String(item.did_number ?? item.did ?? '').trim() || null; // o PBX manda `did`
   const companyId = companyOfExt(map, owner) ?? companyOfExt(map, other) ?? (did ? map.dids.get(did) ?? null : null);
   const userOf = (ext: string | null) => (ext ? map.links.get(`${companyOfExt(map, ext)}|${ext}`) ?? null : null);
   const clean = (s: unknown) => { const v = String(s ?? '').trim(); return v || null; };
@@ -109,25 +120,26 @@ export async function syncPbx(pbxId: string, log: FastifyBaseLogger): Promise<nu
     if (!pbx?.clientIdEnc || !pbx.clientSecretEnc) return 0;
     const creds: PbxCreds = { baseUrl: pbx.baseUrl, accessId: decryptSecret(pbx.clientIdEnc), accessKey: decryptSecret(pbx.clientSecretEnc) };
     const map = await loadMap(pbxId);
-    const cutoff = Date.now() - BACKFILL_DAYS * 86_400_000;
+    const backfill = !pbx.cdrCursorAt;
+    const stopAt = backfill ? Date.now() - BACKFILL_DAYS * 86_400_000 : +pbx.cdrCursorAt! - OVERLAP_MS;
+    const maxPages = backfill ? MAX_PAGES_BACKFILL : MAX_PAGES_INCREMENTAL;
+    let newest = pbx.cdrCursorAt ? +pbx.cdrCursorAt : 0;
 
-    for (let page = 1; page <= MAX_PAGES; page++) {
+    for (let page = 1; page <= maxPages; page++) {
       const res = await openapiGet(creds, 'v1.0/cdr/list', { page, page_size: PAGE_SIZE, sort_by: 'id', order_by: 'desc' });
       const items: any[] = Array.isArray(res.data) ? res.data : [];
       if (!items.length) break;
       const rows = items.map((it) => mapCdr(pbxId, it, map)).filter((r) => r.uid && r.uid !== 'undefined');
-      const known = new Set(
-        (await prisma.call.findMany({ where: { pbxId, uid: { in: rows.map((r) => r.uid) } }, select: { uid: true } })).map((c) => c.uid),
-      );
-      const fresh = rows.filter((r) => !known.has(r.uid) && (!r.startedAt || +r.startedAt >= cutoff));
-      if (fresh.length) {
-        const out = await prisma.call.createMany({ data: fresh, skipDuplicates: true });
+      for (const r of rows) if (r.startedAt && +r.startedAt > newest && +r.startedAt <= Date.now() + 60_000) newest = +r.startedAt;
+      const keep = rows.filter((r) => (STORE_UNASSIGNED || r.companyId) && (!r.startedAt || +r.startedAt >= stopAt));
+      if (keep.length) {
+        const out = await prisma.call.createMany({ data: keep, skipDuplicates: true }); // sobreposição de páginas: ignora repetidas
         inserted += out.count;
       }
-      const reachedKnown = known.size > 0;
-      const reachedCutoff = rows.some((r) => r.startedAt && +r.startedAt < cutoff);
-      if (reachedKnown || reachedCutoff || items.length < PAGE_SIZE) break;
+      // Passou do marcador nesta página (lista em ordem decrescente) -> terminou.
+      if (rows.some((r) => r.startedAt && +r.startedAt < stopAt) || items.length < PAGE_SIZE) break;
     }
+    if (newest) await prisma.pbx.update({ where: { id: pbxId }, data: { cdrCursorAt: new Date(newest) } });
     await prisma.pbx.update({ where: { id: pbxId }, data: { cdrSyncedAt: new Date(), cdrSyncError: null } });
     if (inserted) log.info({ pbxId, inserted }, 'CDR sincronizado');
   } catch (e: any) {

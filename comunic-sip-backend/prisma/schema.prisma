@@ -23,6 +23,8 @@ model Pbx {
   // Coleta de CDR pela OpenAPI (Client ID/Secret ficam em client_id_enc/client_secret_enc)
   cdrSyncedAt     DateTime? @map("cdr_synced_at")
   cdrSyncError    String?   @map("cdr_sync_error")
+  // Horário da chamada mais nova já lida do PBX (marcador da coleta incremental)
+  cdrCursorAt     DateTime? @map("cdr_cursor_at")
   companies       Company[]
 
   @@map("pbx")
