@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Granulação total de acessos:** interruptor por pessoa e permissão para todos os usuários (inclusive retirar o que o papel daria), "Conceder acessos" ajustável só pelo master, master intocável, migration `20261112140000_permission_deny`.
 - **Mínimo privilégio no painel:** Super Administrador do Comunic Chat altera; Administrador só visualiza; Atendente vê só o próprio. Novo papel `COMPANY_VIEWER`, permissões `view_extensions` e `manage_access`, módulo **Acessos** para conceder/revogar permissões extras (sem autoelevação, valendo na hora, auditado) e `GET /v1/panel/me` com as permissões efetivas. Script `papel-plataforma.mjs`; o seed não concede mais SUPER_ADMIN.
 - **Status do ramal no painel:** Conectado / Desconectado / Desvinculado, com base no sinal de presença da extensão (`POST /v1/presence`, a cada minuto); a coluna atualiza sozinha a cada 30 s.
 - **Acesso de emergência ao painel:** SUPER_ADMIN com usuário + senha (Argon2id) + código do autenticador (TOTP), criado só por script (`scripts/admin-emergencia.mjs`); bloqueio após 5 falhas, limite por IP, sessão de 1 h e auditoria. Substitui a entrada manual por token.

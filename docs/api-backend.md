@@ -119,8 +119,8 @@ Não existe remoção (regra de negócio; a API do Helena também não oferece).
 | Método | Rota | Permissão | Descrição |
 |---|---|---|---|
 | GET | `/v1/panel/me` | qualquer | `{ userId, role, emergency, company, permissions }` — permissões **efetivas** (papel + concessões) com escopo; o painel usa para mostrar só o que pode |
-| GET | `/v1/panel/access` | `manage_access` | Usuários da empresa com perfil no Comunic Chat, papel, `included` (o que o papel já dá) e `grants` (concessões) |
-| PUT | `/v1/panel/access/:helenaUserId` | `manage_access` | `{ permission, granted }` concede/revoga uma permissão da lista concedível. **403** se for o próprio usuário |
+| GET | `/v1/panel/access` | `manage_access` | Matriz usuário × permissão: para cada uma, `on`, `source` (`master` · `role` · `granted` · `denied` · `none`) e `locked` (motivo, quando o chamador não pode mexer) |
+| PUT | `/v1/panel/access/:helenaUserId` | `manage_access` | `{ permission, granted }` liga/desliga. Igual ao padrão do papel = remove o ajuste. **403** com o motivo se a célula estiver travada (master, próprio usuário, permissão só do master, outro admin) · **404** se o usuário não for da empresa |
 
 Respostas **403** dizem "você não tem permissão para esta ação" ou "fora do seu escopo".
 

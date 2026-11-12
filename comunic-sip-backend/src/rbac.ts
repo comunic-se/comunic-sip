@@ -5,8 +5,11 @@
 //   Helena "Super Administrador" -> COMPANY_ADMIN  (altera na própria empresa e concede permissões)
 //   Helena "Administrador"       -> COMPANY_VIEWER (só visualiza a empresa)
 //   Helena "Atendente"/"Restrito"-> AGENT          (só o próprio)
-// Permissões extras: tabela permission_grant (escopo = empresa), concedidas por quem
-// tem manage_access, sempre auditadas. Ninguém concede a si mesmo.
+// Ajustes por usuário: tabela permission_grant (escopo = empresa). Cada permissão pode
+// ser LIGADA (allowed=true) ou DESLIGADA (allowed=false) para qualquer usuário,
+// independente do papel; o papel é só o ponto de partida. Auditado; ninguém altera a si mesmo.
+// MASTER (SUPER_ADMIN, e PARTNER_ADMIN no seu parceiro) não pode ser restringido.
+// O próprio usuário sempre vê os PRÓPRIOS dados (escopo 'self' não é negado).
 import { prisma } from './db.js';
 import type { HelenaIdentity } from './helena.js';
 
@@ -53,10 +56,21 @@ const MATRIX: Record<Role, Partial<Record<Permission, DataScope>>> = {
   },
 };
 
-/** Permissões que podem ser concedidas individualmente (sempre com escopo da empresa). */
+/** Permissões ajustáveis por usuário (escopo da empresa). */
 export const GRANTABLE: Permission[] = [
-  'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording',
+  'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording', 'manage_access',
 ];
+/** Só o master (escopo all/partner em manage_access) mexe nestas. */
+export const MASTER_ONLY: Permission[] = ['manage_access'];
+
+export function isMaster(role: Role): boolean {
+  return role === 'SUPER_ADMIN' || role === 'PARTNER_ADMIN';
+}
+
+/** O papel já liga esta permissão na empresa inteira? (padrão do interruptor) */
+export function roleDefaultOn(role: Role, perm: Permission): boolean {
+  return ['company', 'partner', 'all'].includes(permissionScope(role, perm) ?? '');
+}
 
 const RANK: Record<DataScope, number> = { self: 0, department: 1, company: 2, partner: 3, all: 4 };
 
@@ -78,13 +92,15 @@ export interface Caller { role: Role; userId: string; companyId: string; emergen
  */
 export async function effectiveScope(user: Caller, perm: Permission): Promise<DataScope | null> {
   const byRole = permissionScope(user.role, perm);
-  if (byRole === 'all' || byRole === 'partner' || byRole === 'company') return byRole;
-  if (user.emergency || !GRANTABLE.includes(perm)) return byRole;
+  // Master não é restringido; emergência é master.
+  if (byRole === 'all' || byRole === 'partner' || user.emergency || !GRANTABLE.includes(perm)) return byRole;
   const g = await prisma.permissionGrant.findUnique({
     where: { companyId_helenaUserId_permission: { companyId: user.companyId, helenaUserId: user.userId, permission: perm } },
   });
   if (!g) return byRole;
-  return !byRole || RANK.company > RANK[byRole] ? 'company' : byRole;
+  if (g.allowed) return !byRole || RANK.company > RANK[byRole] ? 'company' : byRole;
+  // Negado: perde o nível empresa; mantém só os próprios dados ('self') ou do setor, se o papel der.
+  return byRole === 'self' || byRole === 'department' ? byRole : null;
 }
 
 /** Mapa permissão -> escopo efetivo (para o painel esconder o que não pode). */

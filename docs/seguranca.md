@@ -4,7 +4,7 @@
 1. **Segredos ficam no servidor.** AccessID/AccessKey do Yeastar e tokens permanentes do Helena nunca vão para a extensão nem para o painel.
 2. **Cifra em repouso.** Segredos no banco (chave do Linkus SDK do PBX, token permanente do Helena) são cifrados com AES-256-GCM (`src/crypto.ts`) usando `ENCRYPTION_KEY` (32 bytes em base64). Perder a chave = perder os segredos; troca de chave exige recifrar.
 3. **Gate por empresa.** Só empresas cadastradas e com `active = true` recebem ramal/assinatura ou acessam o painel.
-4. **Mínimo privilégio (RBAC).** Papel vindo do perfil no Comunic Chat (Super Administrador altera; Administrador só visualiza; Atendente vê só o próprio); papéis de plataforma só por script ou acesso de emergência; extras só por concessão explícita, auditada e sem autoelevação. Ver `painel-gestao-rbac.md`.
+4. **Mínimo privilégio (RBAC).** Papel vindo do perfil no Comunic Chat (Super Administrador altera; Administrador só visualiza; Atendente vê só o próprio); papéis de plataforma só por script ou acesso de emergência; cada permissão pode ser ligada ou desligada por pessoa (o papel é só o padrão), com auditoria, sem autoelevação e com o master intocável. Ver `painel-gestao-rbac.md`.
 5. **Auditoria.** Alterações feitas pelo painel vão para `audit_log`.
 
 ## O que nunca fazer

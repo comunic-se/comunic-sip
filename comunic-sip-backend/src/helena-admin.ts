@@ -1,6 +1,7 @@
 // Consultas administrativas na Helena usando o token PERMANENTE da empresa
 // (pn_...). Diferente do helena.ts, que valida a sessão do usuário (agent/me).
 import { config } from './config.js';
+import { decryptSecret } from './crypto.js';
 
 export interface HelenaAgent {
   userId: string;
@@ -123,4 +124,18 @@ export async function updateContact(token: string, id: string, c: ContactRec): P
   const t = await res.text();
   if (!res.ok) throw new Error(`contact update ${res.status}: ${t.slice(0, 200)}`);
   return t ? JSON.parse(t) : {};
+}
+
+
+// Cache curto dos agentes por empresa (nomes/perfis mudam pouco): evita bater no
+// Helena a cada abertura de tela. Usado no diretório e no módulo Acessos.
+const AGENTS_TTL_MS = 5 * 60_000;
+const agentCache = new Map<string, { at: number; agents: HelenaAgent[] }>();
+
+export async function listAgentsCached(companyId: string, tokenEnc: string, fresh = false): Promise<HelenaAgent[]> {
+  const hit = agentCache.get(companyId);
+  if (!fresh && hit && Date.now() - hit.at < AGENTS_TTL_MS) return hit.agents;
+  const agents = await listAgents(decryptSecret(tokenEnc));
+  agentCache.set(companyId, { at: Date.now(), agents });
+  return agents;
 }

@@ -64,17 +64,31 @@ Escopos: `all` > `partner` > `company` > `department` > `self`. "—" = sem aces
 
 Fonte de verdade: `MATRIX` em `src/rbac.ts`.
 
-## Permissões extras (módulo Acessos)
-- Quem tem `manage_access` (Super Administrador da empresa, emergência, SUPER/PARTNER) liga/desliga, por usuário: ver ramais, alterar ramais, dashboard, chamadas, exportar e gravações — sempre com escopo da **empresa**.
-- **Ninguém altera as próprias permissões** (sem autoelevação). `manage_access` e papéis de plataforma **não** são concedíveis pelo painel.
-- Concessão e revogação valem **na hora** (o backend consulta a tabela `permission_grant` a cada pedido) e geram `permission_grant` / `permission_revoke` no `audit_log`.
-- O que o papel já inclui aparece como "✓ papel".
+## Granulação por usuário (módulo Acessos)
+**Todo usuário tem um interruptor para cada permissão**, independente do papel. O papel é só o **ponto de partida**:
+
+- Ligar o que o papel não dá = **concedida** (ex.: um Atendente que pode alterar ramais).
+- Desligar o que o papel daria = **retirada** (ex.: um Administrador que não vê chamadas).
+- Voltar ao padrão do papel apaga o ajuste (a pessoa volta a seguir o papel; se o perfil dela mudar no Comunic Chat, recebe o novo padrão).
+- Ponto azul no interruptor = ajustado em relação ao padrão.
+
+Permissões ajustáveis: ver ramais, alterar ramais, dashboard, chamadas, exportar, gravações e **conceder acessos** — todas com escopo da empresa.
+
+Regras de segurança:
+| Regra | Por quê |
+|---|---|
+| **Master** (SUPER_ADMIN; PARTNER_ADMIN no seu parceiro; acesso de emergência) tem tudo e **não pode ser restringido** | É o dono da plataforma e a saída de emergência |
+| **Ninguém altera as próprias permissões** | Sem autoelevação |
+| "Conceder acessos" e mudanças em **outro admin da empresa** só pelo master | Um admin não pode criar outros admins nem rebaixar colegas |
+| Cada pessoa **sempre vê os próprios** dados (ramal, chamadas, gravações) | Retirar "Chamadas" tira a visão da empresa, não a do próprio histórico |
+| Mudanças valem **na hora** (o backend consulta `permission_grant` a cada pedido) | Revogar não espera a sessão expirar |
+| Tudo no `audit_log` (`permission_grant` / `permission_revoke`, com quem fez, alvo e papel) | Responsabilidade e rastreio |
 
 ## Módulos
 | Módulo | Permissão | Estado |
 |---|---|---|
 | Ramais (ver: `view_extensions`; vincular/desvincular: `manage_extensions`) | `view_extensions` / `manage_extensions` | **pronto** — sem `manage_extensions` a tela fica "Somente visualização" |
-| Acessos (papéis e permissões extras) | `manage_access` | **pronto** |
+| Acessos (interruptor por pessoa e permissão) | `manage_access` | **pronto** |
 | Dashboard | `view_dashboard` | em breve (depende do CDR) |
 | Chamadas | `view_cdr` | em breve (CDR via webhook 30012) |
 | Gravações | `play_recording` | em breve |

@@ -174,12 +174,14 @@ model EmergencyAdmin {
   @@map("emergency_admin")
 }
 
-// Permissão extra concedida a um usuário dentro da empresa (mínimo privilégio:
-// o papel dá o básico; o resto só por concessão explícita e auditada).
+// Ajuste de permissão por usuário dentro da empresa: concede (allowed=true) ou
+// nega (allowed=false) algo além/aquém do padrão do papel. Auditado.
 model PermissionGrant {
   companyId    String   @map("company_id")
   helenaUserId String   @map("helena_user_id")
   permission   String
+  // true = concedida além do papel; false = negada (tira algo que o papel daria)
+  allowed      Boolean  @default(true)
   grantedBy    String   @map("granted_by")
   createdAt    DateTime @default(now()) @map("created_at")
 

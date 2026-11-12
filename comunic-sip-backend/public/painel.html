@@ -127,7 +127,9 @@
   .role-tag.admin{background:var(--blue-soft);color:var(--blue-dark)} .role-tag.super{background:#ede9fe;color:#6d28d9}
   th.perm{text-align:center;white-space:nowrap;padding:12px 8px} td.perm{text-align:center;padding:11px 8px}
   .role-tag{white-space:nowrap}
-  .inc{font-size:11px;font-weight:600;color:var(--green)}
+  .switch.custom{position:relative} .switch.custom::after{content:"";position:absolute;top:-3px;right:-5px;width:7px;height:7px;border-radius:999px;background:var(--blue)}
+  .acc-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+  .acc-legend i{display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--blue);margin-right:5px;vertical-align:middle}
   .switch.sm .trk{width:32px;height:18px} .switch.sm .trk::after{width:12px;height:12px} .switch.sm input:checked+.trk::after{left:17px}
   .switch input:disabled+.trk{opacity:.45;cursor:not-allowed}
   .readonly-note{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--line);border-radius:999px;padding:3px 10px;margin-left:8px;vertical-align:middle}
@@ -236,9 +238,10 @@
 
         <!-- ACESSOS -->
         <section class="view" data-view="acessos" hidden>
-          <div class="page-head"><div><h1 class="page-title">Acessos</h1><div class="page-sub">Quem pode ver e alterar o quê. O papel vem do perfil no Comunic Chat; permissões extras são concedidas aqui e ficam registradas na auditoria.</div></div></div>
+          <div class="page-head"><div><h1 class="page-title">Acessos</h1><div class="page-sub">Ligue ou desligue cada permissão por pessoa. O papel (perfil no Comunic Chat) é só o ponto de partida; toda mudança vale na hora e fica na auditoria.</div></div></div>
           <div class="toolbar"><div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="acc-search" placeholder="Buscar usuário…" autocomplete="off" /></div></div>
           <div class="card" style="overflow-x:auto"><table><thead id="acc-head"></thead><tbody id="acc-rows"></tbody></table></div>
+          <div class="acc-legend"><span><i></i>ajustado em relação ao padrão do papel</span><span>Interruptor apagado = travado (passe o mouse para ver o motivo)</span><span>Cada pessoa sempre vê os próprios dados</span></div>
           <div class="appmsg err" id="acc-msg"></div>
         </section>
 
@@ -587,8 +590,9 @@ $('#dp-save').onclick=async()=>{
 
 
 /* ---------- Acessos ---------- */
-const ROLE_LABEL={SUPER_ADMIN:'Super admin (plataforma)',PARTNER_ADMIN:'Admin do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};
-const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Gravações'};
+const ROLE_LABEL={SUPER_ADMIN:'Master',PARTNER_ADMIN:'Master do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};
+const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Gravações',manage_access:'Conceder acessos'};
+const SRC_TIP={master:'Master: acesso total',role:'Padrão do papel',granted:'Concedida (além do papel)',denied:'Retirada (o papel daria)',none:'Desligada'};
 let ACC=null;
 $('#acc-search').addEventListener('input',renderAcessos);
 async function loadAcessos(){
@@ -610,19 +614,18 @@ function renderAcessos(){
     let html='<td><div class="u-name">'+esc(u.name||'Sem nome')+(u.self?' <span class="muted" style="font-weight:500">(você)</span>':'')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
       '<td class="muted">'+esc(u.profile||'')+'</td><td><span class="role-tag '+cls+'">'+esc(ROLE_LABEL[u.role]||u.role)+'</span></td>';
     for(const g of ACC.grantable){
-      if(u.included.includes(g.permission)){html+='<td class="perm"><span class="inc" title="Já incluído no papel">✓ papel</span></td>';continue;}
-      const on=u.grants.some(x=>x.permission===g.permission);
-      const dis=u.self?' disabled title="Você não pode alterar as suas próprias permissões"':'';
-      html+='<td class="perm"><label class="switch sm"><input type="checkbox" data-perm="'+g.permission+'"'+(on?' checked':'')+dis+'><span class="trk"></span></label></td>';
+      const c=u.perms[g.permission]||{on:false,source:'none',locked:null};
+      const custom=c.source==='granted'||c.source==='denied';
+      const tip=esc((c.locked?c.locked+' · ':'')+SRC_TIP[c.source]);
+      html+='<td class="perm"><label class="switch sm'+(custom?' custom':'')+'" title="'+tip+'"><input type="checkbox" data-perm="'+g.permission+'"'+(c.on?' checked':'')+(c.locked?' disabled':'')+'><span class="trk"></span></label></td>';
     }
     tr.innerHTML=html;
     tr.querySelectorAll('input[data-perm]').forEach(cb=>cb.onchange=async()=>{
       cb.disabled=true; $('#acc-msg').textContent='';
       try{
         await api('/v1/panel/access/'+encodeURIComponent(u.userId),{method:'PUT',body:JSON.stringify({permission:cb.dataset.perm,granted:cb.checked})});
-        const g=u.grants; if(cb.checked) g.push({permission:cb.dataset.perm}); else u.grants=g.filter(x=>x.permission!==cb.dataset.perm);
-      }catch(e){cb.checked=!cb.checked;$('#acc-msg').textContent=e.message;}
-      finally{cb.disabled=false;}
+        await loadAcessos(); // recarrega: mostra a origem certa (padrão/concedida/retirada)
+      }catch(e){cb.checked=!cb.checked;cb.disabled=false;$('#acc-msg').textContent=e.message;}
     });
     rows.appendChild(tr);
   }
