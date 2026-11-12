@@ -76,6 +76,7 @@ Fonte de verdade: `MATRIX` em `src/rbac.ts`. Se divergir desta tabela, vale o c�
 - PARTNER_ADMIN só vê e cria empresas do próprio parceiro e só usa PBXs que já atendem suas empresas.
 
 ## Regras do módulo Ramais
+- Coluna **Status**: **Conectado** (extensão com o ramal registrado, sinal nos últimos 2,5 min), **Desconectado** (tem ramal, mas sem sinal — passe o mouse para ver o último sinal) e **Desvinculado** (sem ramal). Atualiza sozinha a cada 30 s.
 - Só ramais dentro das faixas (`extension_range`) da empresa.
 - Um ramal por usuário e um usuário por ramal dentro da empresa (restrições únicas no banco).
 - Toda alteração grava `audit_log`.

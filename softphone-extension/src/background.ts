@@ -178,8 +178,36 @@ async function renewSignature(): Promise<void> {
   }
 }
 
+// ---------- Presença (status "Conectado" no painel) ----------
+// Avisa o backend quando o registro muda e a cada minuto enquanto registrado.
+// O backend marca "Desconectado" se ficar 2,5 min sem aviso.
+const PRESENCE_ALARM = 'comunic-presence';
+let lastPresence: 'online' | 'offline' | null = null;
+
+async function reportPresence(status: 'online' | 'offline', force = false): Promise<void> {
+  if (!force && status === lastPresence && status === 'offline') return; // offline não precisa repetir
+  const r = await backendContacts('/v1/presence', { method: 'POST', body: JSON.stringify({ status }) }).catch(() => null);
+  if (r && !r.error) lastPresence = status;
+}
+
+/** Pergunta ao offscreen (quem mantém o registro) e avisa o backend. */
+async function presenceTick(): Promise<void> {
+  const has = await chrome.offscreen.hasDocument?.();
+  let status: string = 'idle';
+  if (has) {
+    const r = (await chrome.runtime.sendMessage({ target: 'offscreen', type: 'GET_REG' }).catch(() => null)) as { status?: string } | null;
+    status = r?.status ?? 'idle';
+  }
+  await reportPresence(status === 'registered' ? 'online' : 'offline', status === 'registered');
+}
+
+chrome.alarms.get(PRESENCE_ALARM).then((a) => {
+  if (!a) chrome.alarms.create(PRESENCE_ALARM, { periodInMinutes: 1 });
+});
+
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RENEW_ALARM) renewSignature();
+  if (alarm.name === PRESENCE_ALARM) presenceTick();
 });
 
 async function loginIntegrado(helenaToken: string): Promise<void> {
@@ -348,6 +376,8 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
       }
       case 'STATUS': {
         lastStatus = { status: raw.status, detail: raw.detail };
+        if (raw.status === 'registered') reportPresence('online', true);
+        else if (raw.status === 'failed' || raw.status === 'idle') reportPresence('offline', true);
         if (raw.status === 'failed' && (await signatureExpiringSoon())) renewSignature();
         broadcastToPopup({ target: 'popup', type: 'STATUS', status: raw.status, detail: raw.detail });
         break;

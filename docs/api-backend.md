@@ -69,7 +69,7 @@ SUPER_ADMIN e PARTNER_ADMIN podem passar `companyId` (corpo ou query) para agir 
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/v1/panel/users` | Agentes da empresa (lidos do Helena com o token permanente) e o ramal vinculado de cada um |
+| GET | `/v1/panel/users` | Agentes da empresa (lidos do Helena com o token permanente), o ramal vinculado e `status`: `online` (extensão registrada), `offline` ou `unlinked` (sem ramal), com `lastSeen` (epoch ms do último sinal) |
 | GET | `/v1/panel/ranges` | Faixas de ramal da empresa |
 | POST | `/v1/panel/extensions` | Vincula `{ helenaUserId, extension, companyId? }`. Se o usuário já tem ramal, troca. **400** se o ramal estiver fora das faixas da empresa. O banco impede o mesmo ramal para dois usuários da empresa |
 | DELETE | `/v1/panel/extensions/:helenaUserId` | Desvincula (`?companyId=` opcional) |
@@ -111,6 +111,12 @@ Não existe remoção (regra de negócio; a API do Helena também não oferece).
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/v1/directory` | Ramais da **própria empresa** do usuário: `{ items: [{ extension, name, me }] }`, em ordem alfabética. Fonte: vínculos atendente → ramal do Comunic.SIP; nomes vindos do Helena (token permanente, cache de 5 min). Sem token do Helena, devolve "Ramal NNNN" como nome. Usado na transferência da extensão |
+
+## Presença (JWT)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/v1/presence` | A extensão informa o próprio status: `{ status: "online" \| "offline" }`. Enviado quando o registro muda e a cada 1 min enquanto registrado. Sem sinal por **2,5 min**, o ramal aparece como desconectado. Guardado em memória (volta em até 1 min após reiniciar o backend) |
 
 ## CORS
 Só as origens em `ALLOWED_ORIGINS` (separadas por vírgula). Vazio = nega chamadas de outras origens. A extensão não depende de CORS (usa permissão de host) e o painel é servido pelo próprio backend.

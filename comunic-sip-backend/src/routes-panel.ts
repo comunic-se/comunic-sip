@@ -5,6 +5,7 @@ import { decryptSecret } from './crypto.js';
 import { requireAuth, type PanelToken } from './auth.js';
 import { listAgents } from './helena-admin.js';
 import { permissionScope } from './rbac.js';
+import { getPresence } from './presence.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -78,6 +79,8 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
       profile: a.profile,
       departmentIds: a.departments.map((d) => d.departmentId),
       extension: byUser.get(a.userId) ?? null,
+      // conectado = extensão registrada e com batimento recente; sem ramal = desvinculado
+      ...(byUser.has(a.userId) ? getPresence(companyId, a.userId) : { status: 'unlinked', lastSeen: null }),
     }));
   });
 

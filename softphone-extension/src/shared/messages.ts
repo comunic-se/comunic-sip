@@ -92,7 +92,9 @@ export type ToOffscreen =
   | { target: 'offscreen'; type: 'RENEW'; config: SdkConfig }
   | { target: 'offscreen'; type: 'CALL'; number: string }
   | { target: 'offscreen'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
-  | { target: 'offscreen'; type: 'GET_HISTORY' };
+  | { target: 'offscreen'; type: 'GET_HISTORY' }
+  // Status atual do registro (presença no painel)
+  | { target: 'offscreen'; type: 'GET_REG' };
 
 // background -> popup
 export type ToPopup =

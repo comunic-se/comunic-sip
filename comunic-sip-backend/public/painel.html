@@ -84,7 +84,8 @@
   .act.primary{background:var(--blue);border-color:var(--blue);color:#fff} .act.primary:hover{background:var(--blue-dark)}
   .act.danger:hover{border-color:var(--red);color:var(--red)}
   .status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600}
-  .dot{width:8px;height:8px;border-radius:999px;background:var(--faint)} .dot.on{background:var(--green-bright)}
+  .dot{width:8px;height:8px;border-radius:999px;background:var(--faint)} .dot.on{background:var(--green-bright)} .dot.off{background:#f59e0b}
+  .status.unlinked{color:var(--muted);font-weight:500}
   .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:56px 24px}
   .empty-state svg{width:56px;height:56px;color:var(--faint);margin-bottom:14px}
   .empty-state .t{font-weight:700;color:var(--ink);font-size:15px;margin-bottom:4px}
@@ -353,7 +354,7 @@ async function loadRamais(){
         '<td><div class="u-name">'+esc(u.name||'Sem nome')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
         '<td class="muted">'+esc(u.profile||'')+'</td>'+
         '<td><input class="ext-input" value="'+esc(u.extension||'')+'" placeholder="—"></td>'+
-        '<td><span class="status"><span class="dot '+(linked?'on':'')+'"></span>'+(linked?'Vinculado':'Sem ramal')+'</span></td>'+
+        '<td class="st-cell">'+statusHtml(u)+'</td>'+
         '<td><div class="row-actions">'+
           '<button class="act primary act-save">Salvar</button>'+
           (linked?'<button class="act danger act-del">Desvincular</button>':'')+
@@ -367,6 +368,7 @@ async function loadRamais(){
       };
       const del=tr.querySelector('.act-del');
       if(del) del.onclick=async()=>{try{await api('/v1/panel/extensions/'+encodeURIComponent(u.userId),{method:'DELETE'});await loadRamais();}catch(e){$('#ram-msg').textContent=e.message;}};
+      tr.dataset.uid=u.userId;
       rows.appendChild(tr);
     }
   }catch(e){
@@ -374,6 +376,27 @@ async function loadRamais(){
     $('#ram-msg').textContent=e.message;
   }
 }
+
+/* Status do ramal: Conectado (extensão registrada) · Desconectado · Desvinculado (sem ramal) */
+function statusHtml(u){
+  if(!u.extension) return '<span class="status unlinked"><span class="dot"></span>Desvinculado</span>';
+  if(u.status==='online') return '<span class="status"><span class="dot on"></span>Conectado</span>';
+  const seen=u.lastSeen?' title="Último sinal: '+new Date(u.lastSeen).toLocaleString('pt-BR')+'"':' title="A extensão ainda não deu sinal desde que o servidor iniciou"';
+  return '<span class="status"'+seen+'><span class="dot off"></span>Desconectado</span>';
+}
+// Atualiza só a coluna Status a cada 30 s enquanto a tela Ramais está aberta
+// (não recria as linhas, para não apagar um ramal que esteja sendo digitado).
+setInterval(async()=>{
+  const view=document.querySelector('.view[data-view="ramais"]');
+  if(!JWT||!view||view.hidden||document.hidden) return;
+  try{
+    const users=await api('/v1/panel/users');
+    for(const u of users){
+      const cell=document.querySelector('#ram-rows tr[data-uid="'+CSS.escape(u.userId)+'"] .st-cell');
+      if(cell) cell.innerHTML=statusHtml(u);
+    }
+  }catch{}
+},30000);
 
 /* ---------- Empresas ---------- */
 let EMP_TAB='companies', COMPANIES=[], PBXS=[], EDIT_CO=null, EDIT_PBX=null;

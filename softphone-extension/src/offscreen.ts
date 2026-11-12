@@ -51,7 +51,9 @@ function stopRing(): void {
   if (ringTimer !== null) { clearInterval(ringTimer); ringTimer = null; }
 }
 
+let regStatus: RegStatus = 'idle';
 function sendStatus(status: RegStatus, detail?: string): void {
+  regStatus = status;
   chrome.runtime
     .sendMessage({ target: 'background', type: 'STATUS', status, detail })
     .catch(() => { /* sem receptor */ });
@@ -405,6 +407,10 @@ async function getHistory(): Promise<HistoryItem[]> {
 
 chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) => {
   if (raw.target !== 'offscreen') return;
+  if (raw.type === 'GET_REG') {
+    sendResponse({ status: regStatus });
+    return undefined;
+  }
   if (raw.type === 'GET_HISTORY') {
     getHistory().then(sendResponse);
     return true; // resposta assíncrona
