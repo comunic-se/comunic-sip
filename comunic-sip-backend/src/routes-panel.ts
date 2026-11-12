@@ -4,24 +4,27 @@ import { prisma } from './db.js';
 import { decryptSecret } from './crypto.js';
 import { requireAuth, type PanelToken } from './auth.js';
 import { listAgents } from './helena-admin.js';
-import { permissionScope } from './rbac.js';
+import { effectiveScope, type Permission, type DataScope } from './rbac.js';
 import { getPresence } from './presence.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-// Resolve em qual empresa o chamador pode operar manage_extensions.
-async function resolveTargetCompany(user: PanelToken, requested?: string): Promise<string | null> {
-  const scope = permissionScope(user.role, 'manage_extensions');
+// Resolve em qual empresa o chamador pode agir com a permissão pedida.
+// all: qualquer empresa; partner: só do parceiro; company/department/self: só a própria.
+async function resolveTargetCompany(
+  user: PanelToken, requested: string | undefined, perm: Permission,
+): Promise<{ companyId: string; scope: DataScope } | null> {
+  const scope = await effectiveScope(user, perm);
   if (!scope) return null;
-  if (scope === 'all') return requested || user.companyId;
+  if (scope === 'all') return { companyId: requested || user.companyId, scope };
   if (scope === 'partner') {
     const target = requested || user.companyId;
     const c = await prisma.company.findUnique({ where: { id: target } });
     if (!c || c.partnerId !== user.partnerId) return null;
-    return target;
+    return { companyId: target, scope };
   }
-  // company/department/self: sempre a própria empresa
-  return user.companyId;
+  if (requested && requested !== user.companyId) return null;
+  return { companyId: user.companyId, scope };
 }
 
 function extInRanges(ext: string, ranges: { fromExt: string; toExt: string }[]): boolean {
@@ -50,11 +53,12 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Usuários da empresa (Helena) + ramal vinculado (se houver).
-  app.get('/v1/panel/users', { preHandler: requireAuth('manage_extensions') }, async (req, reply) => {
+  app.get('/v1/panel/users', { preHandler: requireAuth('view_extensions') }, async (req, reply) => {
     const user = req.user as PanelToken;
     const q = req.query as { companyId?: string };
-    const companyId = await resolveTargetCompany(user, q.companyId);
-    if (!companyId) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const target = await resolveTargetCompany(user, q.companyId, 'view_extensions');
+    if (!target) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const { companyId, scope } = target;
 
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) return reply.code(404).send({ error: 'empresa não encontrada' });
@@ -72,7 +76,13 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
 
     const links = await prisma.extensionLink.findMany({ where: { companyId } });
     const byUser = new Map(links.map((l) => [l.helenaUserId, l.extensionNumber]));
-    return agents.map((a) => ({
+    // Escopo de leitura: setor = só agentes dos meus setores; próprio = só eu.
+    const visible = agents.filter((a) => {
+      if (scope === 'self') return a.userId === user.userId;
+      if (scope === 'department') return a.userId === user.userId || a.departments.some((d) => user.deptIds.includes(d.departmentId));
+      return true;
+    });
+    return visible.map((a) => ({
       userId: a.userId,
       name: a.name,
       email: a.email,
@@ -85,12 +95,12 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Faixas de ramais da empresa.
-  app.get('/v1/panel/ranges', { preHandler: requireAuth('manage_extensions') }, async (req, reply) => {
+  app.get('/v1/panel/ranges', { preHandler: requireAuth('view_extensions') }, async (req, reply) => {
     const user = req.user as PanelToken;
     const q = req.query as { companyId?: string };
-    const companyId = await resolveTargetCompany(user, q.companyId);
-    if (!companyId) return reply.code(403).send({ error: 'fora do seu escopo' });
-    const ranges = await prisma.extensionRange.findMany({ where: { companyId } });
+    const target = await resolveTargetCompany(user, q.companyId, 'view_extensions');
+    if (!target) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const ranges = await prisma.extensionRange.findMany({ where: { companyId: target.companyId } });
     return ranges.map((r) => ({ from: r.fromExt, to: r.toExt }));
   });
 
@@ -101,8 +111,9 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
     if (!body.helenaUserId || !body.extension) {
       return reply.code(400).send({ error: 'helenaUserId e extension são obrigatórios' });
     }
-    const companyId = await resolveTargetCompany(user, body.companyId);
-    if (!companyId) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const target = await resolveTargetCompany(user, body.companyId, 'manage_extensions');
+    if (!target) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const { companyId } = target;
 
     const ext = body.extension.trim();
     const ranges = await prisma.extensionRange.findMany({ where: { companyId } });
@@ -124,8 +135,9 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
     const user = req.user as PanelToken;
     const params = req.params as { helenaUserId: string };
     const q = req.query as { companyId?: string };
-    const companyId = await resolveTargetCompany(user, q.companyId);
-    if (!companyId) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const target = await resolveTargetCompany(user, q.companyId, 'manage_extensions');
+    if (!target) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const { companyId } = target;
     await prisma.extensionLink.deleteMany({ where: { companyId, helenaUserId: params.helenaUserId } });
     await prisma.auditLog.create({
       data: { companyId, actor: user.userId, action: 'extension_unlink', payload: { helenaUserId: params.helenaUserId } },

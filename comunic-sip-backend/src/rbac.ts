@@ -1,9 +1,16 @@
-// Resolução de papel/escopo e matriz de permissões (RBAC multinível).
-// Ver claude/painel-gestao-rbac.md.
+// Controle de acesso (RBAC) com MÍNIMO PRIVILÉGIO.
+// Ver docs/painel-gestao-rbac.md.
+//
+// Papel efetivo (resolveScope): platform_role > role_override > perfil do Helena.
+//   Helena "Super Administrador" -> COMPANY_ADMIN  (altera na própria empresa e concede permissões)
+//   Helena "Administrador"       -> COMPANY_VIEWER (só visualiza a empresa)
+//   Helena "Atendente"/"Restrito"-> AGENT          (só o próprio)
+// Permissões extras: tabela permission_grant (escopo = empresa), concedidas por quem
+// tem manage_access, sempre auditadas. Ninguém concede a si mesmo.
 import { prisma } from './db.js';
 import type { HelenaIdentity } from './helena.js';
 
-export type Role = 'SUPER_ADMIN' | 'PARTNER_ADMIN' | 'COMPANY_ADMIN' | 'SUPERVISOR' | 'AGENT';
+export type Role = 'SUPER_ADMIN' | 'PARTNER_ADMIN' | 'COMPANY_ADMIN' | 'COMPANY_VIEWER' | 'SUPERVISOR' | 'AGENT';
 
 export interface Scope {
   role: Role;
@@ -14,30 +21,44 @@ export interface Scope {
 }
 
 export type Permission =
-  | 'provision_company' | 'manage_pbx' | 'manage_branding' | 'manage_extensions'
-  | 'view_dashboard' | 'view_cdr' | 'export_cdr' | 'play_recording' | 'manage_roles';
+  | 'provision_company' | 'manage_pbx' | 'manage_branding' | 'manage_roles' | 'manage_access'
+  | 'view_extensions' | 'manage_extensions'
+  | 'view_dashboard' | 'view_cdr' | 'export_cdr' | 'play_recording';
 
 export type DataScope = 'all' | 'partner' | 'company' | 'department' | 'self';
 
 const MATRIX: Record<Role, Partial<Record<Permission, DataScope>>> = {
   SUPER_ADMIN: {
-    provision_company: 'all', manage_pbx: 'all', manage_branding: 'all', manage_extensions: 'all',
-    view_dashboard: 'all', view_cdr: 'all', export_cdr: 'all', play_recording: 'all', manage_roles: 'all',
+    provision_company: 'all', manage_pbx: 'all', manage_branding: 'all', manage_roles: 'all', manage_access: 'all',
+    view_extensions: 'all', manage_extensions: 'all',
+    view_dashboard: 'all', view_cdr: 'all', export_cdr: 'all', play_recording: 'all',
   },
   PARTNER_ADMIN: {
-    provision_company: 'partner', manage_branding: 'partner', manage_extensions: 'partner',
-    view_dashboard: 'partner', view_cdr: 'partner', export_cdr: 'partner', play_recording: 'partner', manage_roles: 'partner',
+    provision_company: 'partner', manage_branding: 'partner', manage_roles: 'partner', manage_access: 'partner',
+    view_extensions: 'partner', manage_extensions: 'partner',
+    view_dashboard: 'partner', view_cdr: 'partner', export_cdr: 'partner', play_recording: 'partner',
   },
   COMPANY_ADMIN: {
-    manage_extensions: 'company', view_dashboard: 'company', view_cdr: 'company', export_cdr: 'company', play_recording: 'company',
+    manage_access: 'company', view_extensions: 'company', manage_extensions: 'company',
+    view_dashboard: 'company', view_cdr: 'company', export_cdr: 'company', play_recording: 'company',
+  },
+  COMPANY_VIEWER: {
+    view_extensions: 'company', view_dashboard: 'company', view_cdr: 'company',
   },
   SUPERVISOR: {
-    view_dashboard: 'department', view_cdr: 'department', play_recording: 'department',
+    view_extensions: 'department', view_dashboard: 'department', view_cdr: 'department', play_recording: 'department',
   },
   AGENT: {
-    view_dashboard: 'self', view_cdr: 'self', play_recording: 'self',
+    view_extensions: 'self', view_dashboard: 'self', view_cdr: 'self', play_recording: 'self',
   },
 };
+
+/** Permissões que podem ser concedidas individualmente (sempre com escopo da empresa). */
+export const GRANTABLE: Permission[] = [
+  'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording',
+];
+
+const RANK: Record<DataScope, number> = { self: 0, department: 1, company: 2, partner: 3, all: 4 };
 
 export function permissionScope(role: Role, perm: Permission): DataScope | null {
   return MATRIX[role]?.[perm] ?? null;
@@ -45,6 +66,47 @@ export function permissionScope(role: Role, perm: Permission): DataScope | null 
 
 export function can(role: Role, perm: Permission): boolean {
   return permissionScope(role, perm) !== null;
+}
+
+/** Quem está pedindo (o JWT). */
+export interface Caller { role: Role; userId: string; companyId: string; emergency?: boolean }
+
+/**
+ * Escopo efetivo = o maior entre o do papel e o de uma concessão explícita
+ * (concessão vale para a empresa do usuário). Consulta o banco a cada chamada,
+ * então revogar uma permissão vale na hora, sem esperar o JWT expirar.
+ */
+export async function effectiveScope(user: Caller, perm: Permission): Promise<DataScope | null> {
+  const byRole = permissionScope(user.role, perm);
+  if (byRole === 'all' || byRole === 'partner' || byRole === 'company') return byRole;
+  if (user.emergency || !GRANTABLE.includes(perm)) return byRole;
+  const g = await prisma.permissionGrant.findUnique({
+    where: { companyId_helenaUserId_permission: { companyId: user.companyId, helenaUserId: user.userId, permission: perm } },
+  });
+  if (!g) return byRole;
+  return !byRole || RANK.company > RANK[byRole] ? 'company' : byRole;
+}
+
+/** Mapa permissão -> escopo efetivo (para o painel esconder o que não pode). */
+export async function effectivePermissions(user: Caller): Promise<Partial<Record<Permission, DataScope>>> {
+  const all: Permission[] = [
+    'provision_company', 'manage_pbx', 'manage_branding', 'manage_roles', 'manage_access',
+    'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording',
+  ];
+  const out: Partial<Record<Permission, DataScope>> = {};
+  for (const p of all) {
+    const s = await effectiveScope(user, p);
+    if (s) out[p] = s;
+  }
+  return out;
+}
+
+/** Papel derivado só do perfil do Helena (sem platform_role/override). */
+export function roleFromProfile(profile?: string | null): Role {
+  const p = (profile ?? '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (p === 'SUPERADMIN' || p === 'SUPERADMINISTRADOR' || p === 'SUPERADMINISTRATOR' || p === 'OWNER') return 'COMPANY_ADMIN';
+  if (p === 'ADMIN' || p === 'ADMINISTRADOR' || p === 'ADMINISTRATOR') return 'COMPANY_VIEWER';
+  return 'AGENT';
 }
 
 /** Resolve o papel efetivo: platform_role > role_override > derivado do perfil Helena. */
@@ -68,7 +130,5 @@ export async function resolveScope(id: HelenaIdentity): Promise<Scope> {
     return { role: override.role as Role, userId: id.userId, companyId: id.companyId, departmentIds };
   }
 
-  const profile = (id.profile ?? '').toUpperCase();
-  const role: Role = profile.includes('ADMIN') ? 'COMPANY_ADMIN' : 'AGENT';
-  return { role, userId: id.userId, companyId: id.companyId, departmentIds };
+  return { role: roleFromProfile(id.profile), userId: id.userId, companyId: id.companyId, departmentIds };
 }

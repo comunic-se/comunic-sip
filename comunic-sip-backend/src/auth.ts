@@ -4,7 +4,7 @@ import fastifyJwt from '@fastify/jwt';
 import { config } from './config.js';
 import { prisma } from './db.js';
 import { validateHelenaToken, type HelenaIdentity } from './helena.js';
-import { resolveScope, can, type Permission, type Scope } from './rbac.js';
+import { resolveScope, effectiveScope, type Permission, type Scope } from './rbac.js';
 
 export interface PanelToken {
   userId: string;
@@ -12,6 +12,8 @@ export interface PanelToken {
   partnerId?: string | null;
   role: Scope['role'];
   deptIds: string[];
+  /** Sessão do acesso de emergência (senha + TOTP). */
+  emergency?: boolean;
 }
 
 interface CompanyLite {
@@ -60,8 +62,9 @@ export function requireAuth(perm?: Permission) {
       return reply.code(401).send({ error: 'não autenticado' });
     }
     const u = req.user as PanelToken;
-    if (perm && !can(u.role, perm)) {
-      return reply.code(403).send({ error: 'sem permissão' });
+    // Papel + concessões explícitas (consultadas no banco a cada pedido).
+    if (perm && !(await effectiveScope(u, perm))) {
+      return reply.code(403).send({ error: 'você não tem permissão para esta ação' });
     }
   };
 }

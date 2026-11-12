@@ -63,7 +63,9 @@ Corpo `{ username, password, code }` (código TOTP de 6 dígitos). **200**: `{ t
 ### `GET /v1/me` (JWT)
 Devolve o conteúdo do JWT atual: `{ "user": { ... } }`.
 
-## Painel — ramais (JWT + permissão `manage_extensions`)
+## Painel — ramais (JWT)
+
+Leitura exige `view_extensions` (o escopo filtra: empresa, setor ou só o próprio usuário); alteração exige `manage_extensions`.
 
 SUPER_ADMIN e PARTNER_ADMIN podem passar `companyId` (corpo ou query) para agir em outra empresa do seu escopo; os demais agem só na própria. Fora do escopo → **403**.
 
@@ -111,6 +113,16 @@ Não existe remoção (regra de negócio; a API do Helena também não oferece).
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/v1/directory` | Ramais da **própria empresa** do usuário: `{ items: [{ extension, name, me }] }`, em ordem alfabética. Fonte: vínculos atendente → ramal do Comunic.SIP; nomes vindos do Helena (token permanente, cache de 5 min). Sem token do Helena, devolve "Ramal NNNN" como nome. Usado na transferência da extensão |
+
+## Painel — sessão e acessos (JWT)
+
+| Método | Rota | Permissão | Descrição |
+|---|---|---|---|
+| GET | `/v1/panel/me` | qualquer | `{ userId, role, emergency, company, permissions }` — permissões **efetivas** (papel + concessões) com escopo; o painel usa para mostrar só o que pode |
+| GET | `/v1/panel/access` | `manage_access` | Usuários da empresa com perfil no Comunic Chat, papel, `included` (o que o papel já dá) e `grants` (concessões) |
+| PUT | `/v1/panel/access/:helenaUserId` | `manage_access` | `{ permission, granted }` concede/revoga uma permissão da lista concedível. **403** se for o próprio usuário |
+
+Respostas **403** dizem "você não tem permissão para esta ação" ou "fora do seu escopo".
 
 ## Presença (JWT)
 

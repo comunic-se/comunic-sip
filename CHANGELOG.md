@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Mínimo privilégio no painel:** Super Administrador do Comunic Chat altera; Administrador só visualiza; Atendente vê só o próprio. Novo papel `COMPANY_VIEWER`, permissões `view_extensions` e `manage_access`, módulo **Acessos** para conceder/revogar permissões extras (sem autoelevação, valendo na hora, auditado) e `GET /v1/panel/me` com as permissões efetivas. Script `papel-plataforma.mjs`; o seed não concede mais SUPER_ADMIN.
 - **Status do ramal no painel:** Conectado / Desconectado / Desvinculado, com base no sinal de presença da extensão (`POST /v1/presence`, a cada minuto); a coluna atualiza sozinha a cada 30 s.
 - **Acesso de emergência ao painel:** SUPER_ADMIN com usuário + senha (Argon2id) + código do autenticador (TOTP), criado só por script (`scripts/admin-emergencia.mjs`); bloqueio após 5 falhas, limite por IP, sessão de 1 h e auditoria. Substitui a entrada manual por token.
 - **Transferência com diretório de ramais:** aba "Ramais" com os atendentes da empresa (nome + ramal), busca por nome ou número; teclado completo com apagar na aba "Teclado". Nova rota `GET /v1/directory`.
@@ -31,6 +32,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Rota de depuração `/v1/sip/signature` e o mapeamento fixo de ramais por variável de ambiente.
 
 ### Corrigido
+- "Sair" da sessão de emergência entrava de novo sozinho pela extensão.
+- Aviso de sessão de emergência aparecia em sessão normal (`display:flex` anulava `hidden`).
+- Perfil "Administrador" do Comunic Chat ganhava poder de alteração (qualquer perfil com "ADMIN" virava admin).
 - Telefone vazio nos contatos (diferença de caixa `phoneNumber`/`phonenumber` no Helena).
 - Busca de contatos ignorada (`textFilter` não funciona; usar `name`/`phoneNumber`).
 - Elementos com `hidden` aparecendo no popup (CSS `display` sobrescrevendo).

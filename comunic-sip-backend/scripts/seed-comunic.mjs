@@ -1,6 +1,8 @@
 // Seed do piloto: registra o PBX (credenciais do .env, cifradas), provisiona a
-// Comunic.se, cria a faixa de ramais, vincula o usuário ao ramal 4004 e marca
-// o Pedro como SUPER_ADMIN. Idempotente. Rode: node scripts/seed-comunic.mjs
+// Comunic.se, cria a faixa de ramais e vincula o usuário ao ramal 4004.
+// NÃO concede papéis de plataforma (mínimo privilégio): use
+// scripts/admin-emergencia.mjs ou scripts/papel-plataforma.mjs. Idempotente.
+// Rode: node scripts/seed-comunic.mjs
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { createCipheriv, randomBytes } from 'node:crypto';
@@ -55,10 +57,5 @@ await prisma.extensionLink.upsert({
   create: { companyId: COMPANY_ID, helenaUserId: USER_ID, extensionNumber: RAMAL, createdBy: 'seed' },
 });
 
-const sa = await prisma.platformRole.findFirst({ where: { helenaUserId: USER_ID, role: 'SUPER_ADMIN' } });
-if (!sa) {
-  await prisma.platformRole.create({ data: { helenaUserId: USER_ID, role: 'SUPER_ADMIN', createdBy: 'seed' } });
-}
-
-console.log('Seed OK: PBX, Comunic.se (ativa), faixa 4000-4099, ramal 4004 -> Pedro, SUPER_ADMIN.');
+console.log('Seed OK: PBX, Comunic.se (ativa), faixa 4000-4099, ramal 4004 -> Pedro.');
 await prisma.$disconnect();

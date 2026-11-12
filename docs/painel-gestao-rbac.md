@@ -31,38 +31,50 @@ Se a sessão expirar (401), o painel volta à tela de conexão e tenta de novo p
 ### Embutir só no Comunic Chat
 A rota `/painel` envia `Content-Security-Policy: frame-ancestors 'self' https://*.wts.chat https://*.flw.chat`. Outro site que tente embutir o painel é bloqueado pelo navegador. Para whitelabel em outro domínio, ajuste `PANEL_FRAME_ANCESTORS`.
 
+## Princípio: mínimo privilégio
+Ninguém recebe mais acesso do que o necessário. O **papel** dá o básico; qualquer coisa além disso é uma **permissão extra concedida explicitamente**, com autor e data, e registrada na auditoria. O backend valida toda ação — esconder botões no painel é só conveniência.
+
 ## Papéis
-| Papel | Como é atribuído | Alcance |
+| Papel | Como é atribuído | O que pode por padrão |
 |---|---|---|
-| SUPER_ADMIN | tabela `platform_role` | toda a plataforma |
-| PARTNER_ADMIN | tabela `platform_role` (com `partnerId`) | empresas do parceiro (whitelabel) |
-| COMPANY_ADMIN | automático: perfil ADMIN no Helena | a própria empresa |
-| SUPERVISOR | tabela `role_override` | o(s) departamento(s) dele |
-| AGENT | padrão | só ele mesmo |
+| SUPER_ADMIN | **Acesso de emergência** (senha + TOTP) ou `platform_role` cadastrado por script (`scripts/papel-plataforma.mjs`). Nunca automático | Tudo, em todas as empresas |
+| PARTNER_ADMIN | `platform_role` com `partnerId` (script) | Tudo nas empresas do parceiro |
+| COMPANY_ADMIN | Perfil **Super Administrador** no Comunic Chat | Alterar ramais e **conceder permissões** na própria empresa; ver tudo da empresa |
+| COMPANY_VIEWER | Perfil **Administrador** no Comunic Chat | **Só visualizar** ramais, dashboard e chamadas da empresa |
+| SUPERVISOR | `role_override` | Ver dados do(s) próprio(s) setor(es) |
+| AGENT | Perfil **Atendente** / **Atendente restrito** (padrão) | Ver só o **próprio** ramal, chamadas e gravações |
 
-Ordem de resolução (`resolveScope` em `src/rbac.ts`): `platform_role` > `role_override` > perfil do Helena. O papel é recalculado a cada nova sessão.
+Resolução (`resolveScope` em `src/rbac.ts`): `platform_role` > `role_override` > perfil do Comunic Chat. O papel é calculado a cada login; mudanças de perfil no Comunic Chat valem no próximo login (sessão máx. 12 h).
 
-## Matriz de permissões
+## Matriz (papel → escopo)
 Escopos: `all` > `partner` > `company` > `department` > `self`. "—" = sem acesso.
 
-| Permissão | SUPER | PARTNER | COMPANY_ADMIN | SUPERVISOR | AGENT |
-|---|---|---|---|---|---|
-| `provision_company` | all | partner | — | — | — |
-| `manage_pbx` | all | — | — | — | — |
-| `manage_branding` | all | partner | — | — | — |
-| `manage_roles` | all | partner | — | — | — |
-| `manage_extensions` | all | partner | company | — | — |
-| `view_dashboard` | all | partner | company | department | self |
-| `view_cdr` | all | partner | company | department | self |
-| `export_cdr` | all | partner | company | — | — |
-| `play_recording` | all | partner | company | department | self |
+| Permissão | SUPER | PARTNER | COMPANY_ADMIN | COMPANY_VIEWER | SUPERVISOR | AGENT |
+|---|---|---|---|---|---|---|
+| `provision_company` | all | partner | — | — | — | — |
+| `manage_pbx` | all | — | — | — | — | — |
+| `manage_branding` / `manage_roles` | all | partner | — | — | — | — |
+| `manage_access` (conceder permissões) | all | partner | company | — | — | — |
+| `view_extensions` | all | partner | company | company | department | self |
+| `manage_extensions` | all | partner | company | — | — | — |
+| `view_dashboard` | all | partner | company | company | department | self |
+| `view_cdr` | all | partner | company | company | department | self |
+| `export_cdr` | all | partner | company | — | — | — |
+| `play_recording` | all | partner | company | — | department | self |
 
-Fonte de verdade: `MATRIX` em `src/rbac.ts`. Se divergir desta tabela, vale o código — e atualize esta página.
+Fonte de verdade: `MATRIX` em `src/rbac.ts`.
+
+## Permissões extras (módulo Acessos)
+- Quem tem `manage_access` (Super Administrador da empresa, emergência, SUPER/PARTNER) liga/desliga, por usuário: ver ramais, alterar ramais, dashboard, chamadas, exportar e gravações — sempre com escopo da **empresa**.
+- **Ninguém altera as próprias permissões** (sem autoelevação). `manage_access` e papéis de plataforma **não** são concedíveis pelo painel.
+- Concessão e revogação valem **na hora** (o backend consulta a tabela `permission_grant` a cada pedido) e geram `permission_grant` / `permission_revoke` no `audit_log`.
+- O que o papel já inclui aparece como "✓ papel".
 
 ## Módulos
 | Módulo | Permissão | Estado |
 |---|---|---|
-| Ramais (vincular/desvincular atendente ↔ ramal) | `manage_extensions` | **pronto** |
+| Ramais (ver: `view_extensions`; vincular/desvincular: `manage_extensions`) | `view_extensions` / `manage_extensions` | **pronto** — sem `manage_extensions` a tela fica "Somente visualização" |
+| Acessos (papéis e permissões extras) | `manage_access` | **pronto** |
 | Dashboard | `view_dashboard` | em breve (depende do CDR) |
 | Chamadas | `view_cdr` | em breve (CDR via webhook 30012) |
 | Gravações | `play_recording` | em breve |

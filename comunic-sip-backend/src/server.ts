@@ -10,6 +10,7 @@ import { registerContactRoutes } from './routes-contacts.js';
 import { registerCompanyRoutes } from './routes-companies.js';
 import { registerDirectoryRoutes } from './routes-directory.js';
 import { registerEmergencyRoutes } from './routes-emergency.js';
+import { registerAccessRoutes } from './routes-access.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
@@ -21,6 +22,7 @@ await registerContactRoutes(app);
 await registerCompanyRoutes(app);
 await registerDirectoryRoutes(app);
 await registerEmergencyRoutes(app);
+await registerAccessRoutes(app);
 
 app.get('/health', async () => ({ ok: true }));
 

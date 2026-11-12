@@ -121,6 +121,16 @@
   .range-add input{width:90px}
   .emg-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--amber-soft);color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:8px 14px;font-size:13px;margin-bottom:16px}
   .emg-banner b{font-weight:700}
+  /* hidden sempre vence (display:flex anularia o atributo) */
+  [hidden]{display:none!important}
+  .role-tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:var(--line);color:var(--muted)}
+  .role-tag.admin{background:var(--blue-soft);color:var(--blue-dark)} .role-tag.super{background:#ede9fe;color:#6d28d9}
+  th.perm{text-align:center;white-space:nowrap;padding:12px 8px} td.perm{text-align:center;padding:11px 8px}
+  .role-tag{white-space:nowrap}
+  .inc{font-size:11px;font-weight:600;color:var(--green)}
+  .switch.sm .trk{width:32px;height:18px} .switch.sm .trk::after{width:12px;height:12px} .switch.sm input:checked+.trk::after{left:17px}
+  .switch input:disabled+.trk{opacity:.45;cursor:not-allowed}
+  .readonly-note{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--line);border-radius:999px;padding:3px 10px;margin-left:8px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -155,6 +165,7 @@
           <button class="nav-item" data-view="chamadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Chamadas</button>
           <button class="nav-item" data-view="gravacoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/></svg>Gravações</button>
           <button class="nav-item" data-view="empresas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>Empresas</button>
+          <button class="nav-item" data-view="acessos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>Acessos</button>
         </nav>
       </aside>
 
@@ -172,7 +183,7 @@
             <span class="muted" id="ram-ranges" style="font-size:12.5px"></span>
           </div>
           <div class="card">
-            <table><thead><tr><th>Nome</th><th>Perfil</th><th>Ramal</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+            <table><thead><tr><th>Nome</th><th>Perfil</th><th>Ramal</th><th>Status</th><th style="text-align:right" id="ram-actions-th">Ações</th></tr></thead>
             <tbody id="ram-rows"><tr><td colspan="5" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr></tbody></table>
           </div>
           <div class="appmsg err" id="ram-msg"></div>
@@ -223,6 +234,14 @@
           <div class="appmsg err" id="emp-msg"></div>
         </section>
 
+        <!-- ACESSOS -->
+        <section class="view" data-view="acessos" hidden>
+          <div class="page-head"><div><h1 class="page-title">Acessos</h1><div class="page-sub">Quem pode ver e alterar o quê. O papel vem do perfil no Comunic Chat; permissões extras são concedidas aqui e ficam registradas na auditoria.</div></div></div>
+          <div class="toolbar"><div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="acc-search" placeholder="Buscar usuário…" autocomplete="off" /></div></div>
+          <div class="card" style="overflow-x:auto"><table><thead id="acc-head"></thead><tbody id="acc-rows"></tbody></table></div>
+          <div class="appmsg err" id="acc-msg"></div>
+        </section>
+
         <!-- Modal: empresa -->
         <dialog class="modal" id="dlg-company">
           <div class="m-head"><div class="m-title" id="dc-title">Nova empresa</div><button class="m-close" data-close>×</button></div>
@@ -262,23 +281,35 @@
 <script>
 const KEY='comunicsip_session';
 const EXT_ID=new URLSearchParams(location.search).get('ext')||localStorage.getItem('comunicsip_extid')||'ikenlgkhamdnncmdhejkofimcpiedbld';
-let JWT=null, ROLE=null;
+let JWT=null, ROLE=null, PERMS={};
+const can=(p)=>!!PERMS[p];
 const $=(s)=>document.querySelector(s);
 const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PHONE='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z"/></svg>';
 
 function saveSession(s){localStorage.setItem(KEY,JSON.stringify(s));}
 function readSession(){try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}}
-function logout(){localStorage.removeItem(KEY);JWT=null;$('#app').hidden=true;$('#login').style.display='flex';tryAuto();}
+const LOGGED_OUT='comunicsip_saiu';
+// explicit=true: o usuário clicou em Sair -> não entra de novo sozinho pela extensão.
+function logout(explicit){
+  localStorage.removeItem(KEY); JWT=null; ROLE=null; PERMS={};
+  if(explicit) sessionStorage.setItem(LOGGED_OUT,'1');
+  $('#app').hidden=true; $('#login').style.display='flex'; tryAuto();
+}
 
-function showApp(sess){
+async function showApp(sess){
   JWT=sess.token; ROLE=sess.role;
-  $('#emg-banner').hidden=!sess.emergency;
-  $('#ram-sub').textContent='Vínculo de usuários a ramais — '+sess.company.name;
-  const emp=document.querySelector('.nav-item[data-view="empresas"]');
-  if(emp && !['SUPER_ADMIN','PARTNER_ADMIN'].includes(sess.role)) emp.style.display='none';
+  let me=null;
+  try{ me=await api('/v1/panel/me'); PERMS=me.permissions||{}; ROLE=me.role; }
+  catch(e){ if(!JWT) return; PERMS={}; }
+  $('#emg-banner').hidden=!(me?me.emergency:sess.emergency);
+  $('#ram-sub').innerHTML=esc('Vínculo de usuários a ramais — '+sess.company.name)+(can('manage_extensions')?'':'<span class="readonly-note">Somente visualização</span>');
+  // Menu: só o que a pessoa pode ver
+  const show={ramais:'view_extensions',dashboard:'view_dashboard',chamadas:'view_cdr',gravacoes:'play_recording',empresas:'provision_company',acessos:'manage_access'};
+  document.querySelectorAll('.nav-item').forEach(it=>{it.style.display=can(show[it.dataset.view])?'':'none';});
   $('#login').style.display='none'; $('#app').hidden=false;
-  switchView('ramais');
+  const first=[...document.querySelectorAll('.nav-item')].find(it=>it.style.display!=='none');
+  switchView(first?first.dataset.view:'ramais');
 }
 
 async function api(path,opts={}){
@@ -307,11 +338,12 @@ async function tryAuto(){
   $('#loginErr').textContent=''; $('#autoMsg').textContent='Conectando pela extensão…';
   const sess=readSession();
   if(sess&&sess.token){showApp(sess);return;}
+  if(sessionStorage.getItem(LOGGED_OUT)){$('#autoMsg').textContent='Você saiu do painel.';return;}
   const ext=await tryExtension();
   if(ext&&ext.token){saveSession(ext);showApp(ext);return;}
   $('#autoMsg').textContent=ext&&ext.error?('Extensão: '+ext.error):'Não consegui falar com a extensão. Verifique se ela está instalada e o Comunic Chat aberto.';
 }
-$('#extBtn').onclick=tryAuto;
+$('#extBtn').onclick=()=>{sessionStorage.removeItem(LOGGED_OUT);tryAuto();};
 $('#emg-form').onsubmit=async(ev)=>{
   ev.preventDefault();
   $('#loginErr').textContent=''; const btn=$('#emg-btn'); btn.disabled=true;
@@ -319,11 +351,11 @@ $('#emg-form').onsubmit=async(ev)=>{
     const s=await api('/v1/panel/emergency-login',{method:'POST',body:JSON.stringify({
       username:$('#emg-user').value, password:$('#emg-pass').value, code:$('#emg-code').value})});
     $('#emg-pass').value=''; $('#emg-code').value='';
-    saveSession(s); showApp(s);
+    sessionStorage.removeItem(LOGGED_OUT); saveSession(s); showApp(s);
   }catch(e){$('#loginErr').textContent=e.message;}
   finally{btn.disabled=false;}
 };
-$('#emg-out').onclick=()=>{localStorage.removeItem(KEY);JWT=null;location.reload();};
+$('#emg-out').onclick=()=>logout(true);
 
 function switchView(name){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
@@ -331,6 +363,7 @@ function switchView(name){
   $('.main').scrollTop=0;
   if(name==='ramais') loadRamais();
   if(name==='empresas') loadEmpresas();
+  if(name==='acessos') loadAcessos();
 }
 document.querySelectorAll('.nav-item').forEach(it=>it.addEventListener('click',()=>switchView(it.dataset.view)));
 
@@ -341,6 +374,7 @@ $('#ram-search').addEventListener('input',()=>{clearTimeout(ramSearchTimer);ramS
 async function loadRamais(){
   $('#ram-msg').textContent='';
   const rows=$('#ram-rows');
+  $('#ram-actions-th').hidden=!can('manage_extensions');
   rows.innerHTML='<tr><td colspan="5" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
   try{
     const [users,ranges]=await Promise.all([api('/v1/panel/users'),api('/v1/panel/ranges')]);
@@ -352,15 +386,20 @@ async function loadRamais(){
     for(const u of list){
       const tr=document.createElement('tr');
       const linked=!!u.extension;
+      const edit=can('manage_extensions'); // o backend valida de novo; aqui só esconde
       tr.innerHTML=
         '<td><div class="u-name">'+esc(u.name||'Sem nome')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
         '<td class="muted">'+esc(u.profile||'')+'</td>'+
-        '<td><input class="ext-input" value="'+esc(u.extension||'')+'" placeholder="—"></td>'+
+        (edit?'<td><input class="ext-input" value="'+esc(u.extension||'')+'" placeholder="—"></td>'
+             :'<td><span class="u-name">'+esc(u.extension||'—')+'</span></td>')+
         '<td class="st-cell">'+statusHtml(u)+'</td>'+
-        '<td><div class="row-actions">'+
+        (edit?'<td><div class="row-actions">'+
           '<button class="act primary act-save">Salvar</button>'+
           (linked?'<button class="act danger act-del">Desvincular</button>':'')+
-        '</div></td>';
+        '</div></td>':'');
+      tr.dataset.uid=u.userId;
+      rows.appendChild(tr);
+      if(!edit) continue;
       const input=tr.querySelector('input');
       tr.querySelector('.act-save').onclick=async()=>{
         const ext=input.value.trim();
@@ -370,8 +409,6 @@ async function loadRamais(){
       };
       const del=tr.querySelector('.act-del');
       if(del) del.onclick=async()=>{try{await api('/v1/panel/extensions/'+encodeURIComponent(u.userId),{method:'DELETE'});await loadRamais();}catch(e){$('#ram-msg').textContent=e.message;}};
-      tr.dataset.uid=u.userId;
-      rows.appendChild(tr);
     }
   }catch(e){
     rows.innerHTML='';
@@ -402,7 +439,7 @@ setInterval(async()=>{
 
 /* ---------- Empresas ---------- */
 let EMP_TAB='companies', COMPANIES=[], PBXS=[], EDIT_CO=null, EDIT_PBX=null;
-const isSuper=()=>ROLE==='SUPER_ADMIN';
+const isSuper=()=>can('manage_pbx');
 const empty=(n,t)=>'<tr><td colspan="'+n+'" class="muted" style="padding:20px;text-align:center">'+t+'</td></tr>';
 document.querySelectorAll('dialog [data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 document.querySelectorAll('#emp-tabs .tab').forEach(t=>t.onclick=()=>setEmpTab(t.dataset.tab));
@@ -547,6 +584,49 @@ $('#dp-save').onclick=async()=>{
   }catch(e){$('#dp-msg').textContent=e.message;}
   finally{btn.disabled=false;btn.textContent='Salvar';}
 };
+
+
+/* ---------- Acessos ---------- */
+const ROLE_LABEL={SUPER_ADMIN:'Super admin (plataforma)',PARTNER_ADMIN:'Admin do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};
+const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Gravações'};
+let ACC=null;
+$('#acc-search').addEventListener('input',renderAcessos);
+async function loadAcessos(){
+  $('#acc-msg').textContent=''; $('#acc-rows').innerHTML='<tr><td class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
+  try{ACC=await api('/v1/panel/access');renderAcessos();}
+  catch(e){$('#acc-rows').innerHTML='';$('#acc-msg').textContent=e.message;}
+}
+function renderAcessos(){
+  if(!ACC) return;
+  $('#acc-head').innerHTML='<tr><th>Usuário</th><th>Perfil no Comunic Chat</th><th>Papel</th>'+
+    ACC.grantable.map(g=>'<th class="perm" title="'+esc(g.label)+'">'+esc(PERM_SHORT[g.permission]||g.permission)+'</th>').join('')+'</tr>';
+  const q=($('#acc-search').value||'').trim().toLowerCase();
+  const list=q?ACC.users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)):ACC.users;
+  const rows=$('#acc-rows'); rows.innerHTML='';
+  if(!list.length){rows.innerHTML='<tr><td colspan="'+(3+ACC.grantable.length)+'" class="muted" style="padding:20px;text-align:center">Nenhum usuário.</td></tr>';return;}
+  for(const u of list){
+    const tr=document.createElement('tr');
+    const cls=u.role==='SUPER_ADMIN'||u.role==='PARTNER_ADMIN'?'super':(u.role==='COMPANY_ADMIN'?'admin':'');
+    let html='<td><div class="u-name">'+esc(u.name||'Sem nome')+(u.self?' <span class="muted" style="font-weight:500">(você)</span>':'')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
+      '<td class="muted">'+esc(u.profile||'')+'</td><td><span class="role-tag '+cls+'">'+esc(ROLE_LABEL[u.role]||u.role)+'</span></td>';
+    for(const g of ACC.grantable){
+      if(u.included.includes(g.permission)){html+='<td class="perm"><span class="inc" title="Já incluído no papel">✓ papel</span></td>';continue;}
+      const on=u.grants.some(x=>x.permission===g.permission);
+      const dis=u.self?' disabled title="Você não pode alterar as suas próprias permissões"':'';
+      html+='<td class="perm"><label class="switch sm"><input type="checkbox" data-perm="'+g.permission+'"'+(on?' checked':'')+dis+'><span class="trk"></span></label></td>';
+    }
+    tr.innerHTML=html;
+    tr.querySelectorAll('input[data-perm]').forEach(cb=>cb.onchange=async()=>{
+      cb.disabled=true; $('#acc-msg').textContent='';
+      try{
+        await api('/v1/panel/access/'+encodeURIComponent(u.userId),{method:'PUT',body:JSON.stringify({permission:cb.dataset.perm,granted:cb.checked})});
+        const g=u.grants; if(cb.checked) g.push({permission:cb.dataset.perm}); else u.grants=g.filter(x=>x.permission!==cb.dataset.perm);
+      }catch(e){cb.checked=!cb.checked;$('#acc-msg').textContent=e.message;}
+      finally{cb.disabled=false;}
+    });
+    rows.appendChild(tr);
+  }
+}
 
 tryAuto();
 </script>
