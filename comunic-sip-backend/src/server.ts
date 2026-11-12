@@ -9,6 +9,7 @@ import { registerPanelRoutes } from './routes-panel.js';
 import { registerContactRoutes } from './routes-contacts.js';
 import { registerCompanyRoutes } from './routes-companies.js';
 import { registerDirectoryRoutes } from './routes-directory.js';
+import { registerEmergencyRoutes } from './routes-emergency.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
@@ -19,6 +20,7 @@ await registerPanelRoutes(app);
 await registerContactRoutes(app);
 await registerCompanyRoutes(app);
 await registerDirectoryRoutes(app);
+await registerEmergencyRoutes(app);
 
 app.get('/health', async () => ({ ok: true }));
 

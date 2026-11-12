@@ -26,6 +26,8 @@ O painel pede a sessão à extensão Comunic.Chat (mensagem externa `PANEL_SESSI
 
 Se a sessão expirar (401), o painel volta à tela de conexão e tenta de novo pela extensão.
 
+**Acesso de emergência:** sem Comunic Chat/extensão, um SUPER_ADMIN entra com usuário + senha + código do autenticador (seção "Acesso de emergência" em `seguranca.md`). Sessão de 1 h, com aviso e botão Sair. A antiga entrada manual por token (dev) foi removida.
+
 ### Embutir só no Comunic Chat
 A rota `/painel` envia `Content-Security-Policy: frame-ancestors 'self' https://*.wts.chat https://*.flw.chat`. Outro site que tente embutir o painel é bloqueado pelo navegador. Para whitelabel em outro domínio, ajuste `PANEL_FRAME_ANCESTORS`.
 

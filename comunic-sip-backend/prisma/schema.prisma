@@ -153,3 +153,23 @@ model AuditLog {
   @@index([companyId, at])
   @@map("audit_log")
 }
+
+// Acesso de emergência ao painel (SUPER_ADMIN) quando o Comunic Chat/extensão
+// estiverem fora. Criado só por script no servidor. Senha em hash Argon2id;
+// segredo TOTP cifrado (AES-256-GCM) porque precisa ser lido para validar.
+model EmergencyAdmin {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+  totpSecretEnc String    @map("totp_secret_enc")
+  // Empresa usada como "casa" da sessão (telas como Ramais abrem nela).
+  companyId     String    @map("company_id")
+  failedCount   Int       @default(0) @map("failed_count")
+  lockedUntil   DateTime? @map("locked_until")
+  lastTotpStep  Int?      @map("last_totp_step")
+  lastLoginAt   DateTime? @map("last_login_at")
+  disabled      Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("emergency_admin")
+}

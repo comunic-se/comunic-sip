@@ -60,6 +60,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 |---|---|
 | `seed-comunic.mjs` | Prepara o piloto: registra o PBX (chave cifrada), cria a empresa Comunic.se ativa, faixa de ramais 4000–4099, vincula o Pedro ao ramal 4004 e o marca como `SUPER_ADMIN`. Idempotente (pode rodar de novo). Os IDs do piloto estão fixos no arquivo. |
 | `set-helena-token.mjs <companyId> <token>` | Grava, cifrado, o token permanente da API Helena (`pn_...`) de uma empresa. Necessário para listar usuários no painel e para a aba Contatos. Rode no terminal: o token não deve passar por chat, e-mail ou commit. |
+| `admin-emergencia.mjs` | Contas de acesso de emergência ao painel: `criar <usuario> <companyId>`, `resetar`, `desativar`, `ativar`, `listar`. Pede a senha sem eco e mostra a chave do autenticador uma única vez |
 | `gerar-assinatura.mjs` | Script antigo de testes manuais da assinatura do SDK. Não é usado pelo fluxo atual. |
 
 ## Organização do código (`src/`)
@@ -78,6 +79,9 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `routes-panel.ts` | Painel: página `/painel` (com `frame-ancestors`), logo, usuários, faixas e vínculo de ramais |
 | `routes-contacts.ts` | Contatos (`/v1/contacts`) |
 | `routes-companies.ts` | Módulo Empresas: empresas, PBX, faixas e token do Helena |
+| `routes-directory.ts` | Diretório de ramais da empresa (transferência na extensão) |
+| `routes-emergency.ts` | Login de emergência (senha Argon2id + TOTP, bloqueios, auditoria) |
+| `totp.ts` | Códigos TOTP (RFC 6238) |
 
 Referência completa dos endpoints: [`../docs/api-backend.md`](../docs/api-backend.md).
 
@@ -93,7 +97,8 @@ Schema em `prisma/schema.prisma`; migrations em `prisma/migrations/`.
 | `extension_link` | Usuário Helena → ramal |
 | `platform_role` | Papéis de plataforma/parceiro (`SUPER_ADMIN`, `PARTNER_ADMIN`) |
 | `role_override` | Promoção manual dentro de uma empresa (ex.: `SUPERVISOR`) |
-| `audit_log` | Ações sensíveis (vínculo/desvínculo de ramal, …) |
+| `audit_log` | Ações sensíveis (vínculo/desvínculo de ramal, empresas, logins de emergência, …) |
+| `emergency_admin` | Contas de acesso de emergência: hash Argon2id da senha, segredo TOTP cifrado, bloqueio |
 | `calls`, `contacts_cache`, `did_route` | Reservadas para a ingestão de CDR e espelho de contatos (ainda não usadas) |
 
 Alterar o schema:

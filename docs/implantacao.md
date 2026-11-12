@@ -21,7 +21,8 @@ Modelo escolhido: **opção A** — o host já tem um proxy reverso (que atende 
 5. **Provisionar** a empresa (ver `replicacao-nova-empresa.md`).
 6. **Proxy reverso:** encaminhar `sip.comunic.chat` → `http://127.0.0.1:8787` (proxy instalado no host) ou `http://api:8787` (proxy em container, usando `docker-compose.proxy.yml`).
 7. **Menu no Comunic Chat:** cadastrar o menu personalizado "Página interna" apontando para `https://sip.comunic.chat/painel` (ver `painel-gestao-rbac.md`). O proxy **não** pode adicionar `X-Frame-Options: DENY/SAMEORIGIN` nessa rota, senão o iframe não abre.
-8. **Extensão:** em Ajustes → Login integrado, usar `https://sip.comunic.chat`. Para distribuição, publicar na Chrome Web Store/Edge Add-ons e adicionar o domínio de produção em `externally_connectable` e `optional_host_permissions`.
+8. **Acesso de emergência:** `docker compose exec api node scripts/admin-emergencia.mjs criar <usuario> <companyId>` e guarde senha + autenticador no Vaultwarden (ver `seguranca.md`).
+9. **Extensão:** em Ajustes → Login integrado, usar `https://sip.comunic.chat`. Para distribuição, publicar na Chrome Web Store/Edge Add-ons e adicionar o domínio de produção em `externally_connectable` e `optional_host_permissions`.
 
 ## Extensão em produção: sem tela de Ajustes (fazer junto com o deploy)
 Decisão de 12/11/2026: em produção a extensão já sai **conectada ao backend**, sem configuração pelo usuário. A tela de Ajustes (URL do backend, "Ativar login integrado" e campos manuais de PBX/ramal/assinatura) **sai** do build de produção. Passos:

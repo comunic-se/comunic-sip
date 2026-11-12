@@ -51,6 +51,15 @@ Mesma validação, sem exigir ramal.
 }
 ```
 
+### `POST /v1/panel/emergency-login` — acesso de emergência
+Corpo `{ username, password, code }` (código TOTP de 6 dígitos). **200**: `{ token, role: "SUPER_ADMIN", emergency: true, scope, company }`, JWT de **1 h**.
+| Código | Quando |
+|---|---|
+| 400 | campo faltando |
+| 401 | usuário, senha ou código inválidos (mensagem única, de propósito) |
+| 423 | conta bloqueada por 15 min após 5 falhas |
+| 429 | mais de 10 tentativas do mesmo IP em 15 min |
+
 ### `GET /v1/me` (JWT)
 Devolve o conteúdo do JWT atual: `{ "user": { ... } }`.
 

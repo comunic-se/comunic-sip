@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Acesso de emergência ao painel:** SUPER_ADMIN com usuário + senha (Argon2id) + código do autenticador (TOTP), criado só por script (`scripts/admin-emergencia.mjs`); bloqueio após 5 falhas, limite por IP, sessão de 1 h e auditoria. Substitui a entrada manual por token.
 - **Transferência com diretório de ramais:** aba "Ramais" com os atendentes da empresa (nome + ramal), busca por nome ou número; teclado completo com apagar na aba "Teclado". Nova rota `GET /v1/directory`.
 - **Discador:** botão de apagar (clique apaga um dígito, segurar limpa tudo); barra de abas oculta durante a ligação.
 - **Módulo Empresas no painel:** cadastrar e editar empresas, PBXs (só SUPER_ADMIN), faixas de ramal e token do Helena; ativar/desativar. Credenciais testadas antes de salvar, segredos cifrados, faixas sem sobreposição no mesmo PBX, auditoria de tudo. Substitui os scripts de seed no dia a dia.

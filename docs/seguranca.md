@@ -42,6 +42,21 @@
 - [ ] `TRUST_PROXY=true` atrás do proxy.
 - [ ] Backup do banco cifrado e testado.
 
+## Acesso de emergência (SUPER_ADMIN com senha + autenticador)
+Para manutenção quando o Comunic Chat ou a extensão estiverem fora do ar. Abra `<backend>/painel` direto no navegador → **Acesso de emergência** → usuário, senha e código de 6 dígitos do app autenticador.
+
+| Item | Como funciona |
+|---|---|
+| Criação | **Só por script no servidor**: `node scripts/admin-emergencia.mjs criar <usuario> <companyId>` (no container: `docker compose exec api node scripts/admin-emergencia.mjs …`). Não existe tela nem rota para criar conta |
+| Senha | Digitada sem eco no script; mín. 14 caracteres com maiúscula, minúscula e número; guardada em **hash Argon2id** |
+| Autenticador | TOTP de 6 dígitos / 30 s (Vaultwarden, Google Authenticator, Authy…). A chave é mostrada **uma vez** pelo script; no banco fica **cifrada** (AES-256-GCM), porque precisa ser lida para validar |
+| Proteções | Erro genérico (não revela se o usuário existe; tempo de resposta igual); bloqueio da conta por 15 min após 5 falhas; limite de 10 tentativas por IP a cada 15 min; o mesmo código não serve duas vezes |
+| Sessão | Papel SUPER_ADMIN, **1 h** de validade, aviso amarelo "Sessão de emergência" com **Sair** no painel |
+| Auditoria | `audit_log`: `emergency_login_ok`, `emergency_login_fail` (com motivo e IP), `emergency_login_ratelimited`, e criação/reset/ativação pelo script |
+| Manutenção | `resetar <usuario>` (nova senha e novo autenticador, desbloqueia), `desativar`/`ativar <usuario>`, `listar` |
+
+Guarde usuário, senha e o TOTP no Vaultwarden. Se o celular/cofre for perdido, rode `resetar` no servidor.
+
 ## Riscos aceitos
 | Item | Por que foi aceito | Quando rever |
 |---|---|---|
