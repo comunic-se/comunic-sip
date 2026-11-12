@@ -13,6 +13,7 @@ import { syncPbx } from './cdr-sync.js';
 import { decryptSecret } from './crypto.js';
 import { getToken, openapiGet, type PbxCreds } from './yeastar.js';
 import { Readable } from 'node:stream';
+import { LIMITS } from './rate-limit.js';
 
 const TZ = process.env.PBX_TIMEZONE_OFFSET ?? '-03:00';
 const TZ_MIN = (() => { const m = TZ.match(/^([+-])(\d{2}):(\d{2})$/); return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : -180; })();
@@ -182,7 +183,7 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ---- Exportar (CSV) ----
-  app.get('/v1/panel/calls/export', { preHandler: requireAuth('export_cdr') }, async (req, reply) => {
+  app.get('/v1/panel/calls/export', { preHandler: requireAuth('export_cdr'), config: LIMITS.export }, async (req, reply) => {
     const user = req.user as PanelToken;
     const q = req.query as Q;
     // Exportar exige também enxergar as chamadas no mesmo escopo.
@@ -266,7 +267,7 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ---- Sincronizar agora (master) ----
-  app.post('/v1/panel/pbx/:id/sync', { preHandler: requireAuth('manage_pbx') }, async (req: FastifyRequest, reply) => {
+  app.post('/v1/panel/pbx/:id/sync', { preHandler: requireAuth('manage_pbx'), config: LIMITS.sync }, async (req: FastifyRequest, reply) => {
     const user = req.user as PanelToken;
     const id = String((req.params as any).id);
     const pbx = await prisma.pbx.findUnique({ where: { id } });

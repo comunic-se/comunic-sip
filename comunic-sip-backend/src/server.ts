@@ -13,11 +13,23 @@ import { registerEmergencyRoutes } from './routes-emergency.js';
 import { registerAccessRoutes } from './routes-access.js';
 import { startCdrSync } from './cdr-sync.js';
 import { registerCallRoutes } from './routes-calls.js';
+import { registerRateLimit, LIMITS } from './rate-limit.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 // CORS restrito: só as origens em ALLOWED_ORIGINS (vazio = nega cross-origin).
 await app.register(cors, { origin: config.allowedOrigins.length ? config.allowedOrigins : false });
+await registerRateLimit(app);
+
+// Cabeçalhos de segurança em todas as respostas. O /painel define a própria CSP
+// (pode ser embutido no Comunic Chat); o resto não pode ser embutido em lugar nenhum.
+app.addHook('onSend', async (_req, reply, payload) => {
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('Referrer-Policy', 'no-referrer');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  if (!reply.hasHeader('Content-Security-Policy')) reply.header('Content-Security-Policy', "frame-ancestors 'none'");
+  return payload;
+});
 await registerAuth(app);
 await registerPanelRoutes(app);
 await registerContactRoutes(app);
@@ -35,7 +47,7 @@ app.get('/health', async () => ({ ok: true }));
 
 // Login integrado da extensão: valida a sessão do Comunic Chat, aplica o gate de
 // provisionamento, acha o ramal vinculado e devolve a assinatura do SDK + token.
-app.post('/v1/auth/extension', async (req, reply) => {
+app.post('/v1/auth/extension', { config: LIMITS.login }, async (req, reply) => {
   const { helenaToken } = (req.body ?? {}) as { helenaToken?: string };
   if (!helenaToken) return reply.code(400).send({ error: 'helenaToken é obrigatório' });
   try {
@@ -77,7 +89,7 @@ app.post('/v1/auth/extension', async (req, reply) => {
 });
 
 // Sessão do painel: mesma validação + gate; devolve papel e escopo (sem ramal).
-app.post('/v1/panel/session', async (req, reply) => {
+app.post('/v1/panel/session', { config: LIMITS.login }, async (req, reply) => {
   const { helenaToken } = (req.body ?? {}) as { helenaToken?: string };
   if (!helenaToken) return reply.code(400).send({ error: 'helenaToken é obrigatório' });
   try {

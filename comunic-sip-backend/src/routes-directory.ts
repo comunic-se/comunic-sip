@@ -6,10 +6,11 @@ import { prisma } from './db.js';
 import { requireAuth, type PanelToken } from './auth.js';
 import { listAgentsCached } from './helena-admin.js';
 import { setPresence } from './presence.js';
+import { LIMITS } from './rate-limit.js';
 
 export async function registerDirectoryRoutes(app: FastifyInstance): Promise<void> {
   // Batimento da extensão: { status: 'online' | 'offline' }. Só vale para o próprio usuário.
-  app.post('/v1/presence', { preHandler: requireAuth() }, async (req, reply) => {
+  app.post('/v1/presence', { preHandler: requireAuth(), config: LIMITS.presence }, async (req, reply) => {
     const user = req.user as PanelToken;
     const status = (req.body as any)?.status;
     if (status !== 'online' && status !== 'offline') return reply.code(400).send({ error: 'status inválido' });

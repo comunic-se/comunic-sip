@@ -12,6 +12,7 @@ import { prisma } from './db.js';
 import { decryptSecret } from './crypto.js';
 import { verifyTotp } from './totp.js';
 import type { PanelToken } from './auth.js';
+import { LIMITS } from './rate-limit.js';
 
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60_000;
@@ -34,7 +35,7 @@ function ipLimited(ip: string): boolean {
 }
 
 export async function registerEmergencyRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/v1/panel/emergency-login', async (req, reply) => {
+  app.post('/v1/panel/emergency-login', { config: LIMITS.emergency }, async (req, reply) => {
     const ip = req.ip;
     const b = (req.body ?? {}) as { username?: unknown; password?: unknown; code?: unknown };
     const username = typeof b.username === 'string' ? b.username.trim().toLowerCase() : '';

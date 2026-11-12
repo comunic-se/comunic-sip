@@ -303,9 +303,30 @@ async function getPanelSession(): Promise<unknown> {
   return res.json();
 }
 
-chrome.runtime.onMessageExternal.addListener((msg: any, _sender, sendResponse) => {
+// Segurança: só a página servida pelo PRÓPRIO backend configurado (onde o painel mora)
+// recebe a sessão. O manifest (externally_connectable) já limita os domínios; aqui
+// conferimos a origem exata, então nem outro site do mesmo domínio consegue pedir.
+async function trustedPanelOrigin(sender: chrome.runtime.MessageSender): Promise<boolean> {
+  const { backendUrl } = await chrome.storage.local.get('backendUrl');
+  if (!backendUrl) return false;
+  let expected: string;
+  try { expected = new URL(String(backendUrl)).origin; } catch { return false; }
+  const origin = sender.origin ?? (sender.url ? new URL(sender.url).origin : '');
+  return origin === expected;
+}
+
+chrome.runtime.onMessageExternal.addListener((msg: any, sender, sendResponse) => {
   if (msg?.type === 'PANEL_SESSION') {
-    getPanelSession().then(sendResponse).catch((e) => sendResponse({ error: String(e?.message ?? e) }));
+    trustedPanelOrigin(sender)
+      .then((ok) => {
+        if (!ok) {
+          console.warn('[Comunic.SIP][painel] pedido de sessão recusado de', sender.origin ?? sender.url);
+          sendResponse({ error: 'origem não autorizada' });
+          return;
+        }
+        return getPanelSession().then(sendResponse);
+      })
+      .catch((e) => sendResponse({ error: String(e?.message ?? e) }));
     return true; // resposta assíncrona
   }
   return undefined;

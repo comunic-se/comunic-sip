@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Segurança para produção:** extensão só entrega sessão à origem exata do backend; limite de requisições (geral e apertado em login, emergência, presença, exportação, sincronizar) com chave por sessão; cabeçalhos de segurança e CSP do painel; backup cifrado do banco com rotação e restauração/teste em banco temporário (`scripts/backup.sh`, `scripts/restaurar.sh`).
 - **Click-to-call no Comunic Chat:** botão "Ligar" ao passar o mouse sobre um telefone (sem alterar o DOM do app) e menu de clique direito "Ligar para…"; reconhecimento de telefones brasileiros com recusa de datas, CPF/CNPJ e valores; só disca com ramal registrado e sem chamada em andamento.
 - **Gravações no painel:** lista com filtros, player no rodapé e botão de ouvir também em Chamadas; áudio por proxy autenticado (nada armazenado), permissão separada para **baixar** (`download_recording`), auditoria de cada escuta/download. Gravações ligadas às chamadas pelo `uid` do CDR. Migration `20261112170000_recordings`.
 - **Chamadas e Dashboard no painel:** coleta periódica do CDR pela OpenAPI do Yeastar (Client ID/Secret no cadastro do PBX, cifrados), associação de cada chamada à empresa (faixa ou DID) e ao atendente; lista com filtros, exportação CSV auditada, indicadores, gráficos por dia/hora e ranking por atendente, tudo respeitando o escopo de cada pessoa. Migration `20261112150000_cdr_sync`.

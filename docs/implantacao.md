@@ -41,6 +41,7 @@ Decisão de 12/11/2026: em produção a extensão já sai **conectada ao backend
 - [x] Assinatura do SDK com validade finita e renovação automática.
 
 ## Operação
+- **Backup:** `BACKUP_PASSPHRASE_FILE=/root/.comunicsip-backup-pass ./scripts/backup.sh` no cron (diário); teste mensal com `./scripts/restaurar.sh --testar backups/<arquivo>`. Restaurar produção: `docker compose stop api` e `./scripts/restaurar.sh --restaurar-producao backups/<arquivo>`.
 - Logs: `docker compose logs -f api`.
 - Saúde: `GET /health`.
 - Backup: `pg_dump` diário cifrado; testar restauração.

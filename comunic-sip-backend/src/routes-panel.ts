@@ -42,7 +42,21 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
     const ancestors = process.env.PANEL_FRAME_ANCESTORS
       || "'self' https://*.wts.chat https://*.flw.chat";
     return reply
-      .header('Content-Security-Policy', `frame-ancestors ${ancestors}`)
+      // CSP do painel: só recursos do próprio backend (+ fontes do Google). Inline é
+      // necessário porque o painel é uma página única; o resto fica fechado.
+      .header('Content-Security-Policy', [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "media-src 'self' blob:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        `frame-ancestors ${ancestors}`,
+      ].join('; '))
       .type('text/html')
       .send(html);
   });

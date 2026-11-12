@@ -24,12 +24,14 @@
 ## Superfície de ataque e mitigação
 | Risco | Mitigação |
 |---|---|
-| Site malicioso pedir sessão à extensão | `externally_connectable` limitado a `localhost`, `127.0.0.1` e `*.comunic.chat`. **Pendente:** checar `sender.origin` também no handler |
+| Site malicioso pedir sessão à extensão | `externally_connectable` limita os domínios **e** o handler confere `sender.origin` == origem exata do backend configurado (onde o painel mora). Outro site, mesmo do mesmo domínio, recebe "origem não autorizada" |
 | CORS aberto | `ALLOWED_ORIGINS` com negação por padrão |
 | Painel embutido por site malicioso (clickjacking) | `/painel` envia `frame-ancestors` liberando só `'self'`, `*.wts.chat` e `*.flw.chat` (`PANEL_FRAME_ANCESTORS`) |
 | Parâmetros do menu do Comunic Chat (Id do usuário/conta) adulterados | não são usados para autenticar; a identidade vem só da sessão validada no Helena |
 | Acesso direto à URL do painel, fora do menu | o backend aplica o RBAC em toda rota; as permissões do menu só escondem o item |
 | Abuso da API Helena | retry com espera em 429; rate limit do Helena é 1000 req / 5 min |
+| Abuso / força bruta no backend | `@fastify/rate-limit`: geral `RATE_LIMIT_PER_MIN` (600/min) e apertado em login integrado/sessão do painel (20/min), emergência (10/min por IP, além do bloqueio da conta), presença (12/min), exportação (10/min), sincronizar (6/min). Chave **por sessão/usuário** (não só por IP, porque um escritório inteiro sai pelo mesmo IP); por IP só sem sessão |
+| Clickjacking, sniffing, vazamento de referer | Toda resposta: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restritiva e `frame-ancestors 'none'`. O `/painel` tem CSP própria: só recursos do próprio backend (+ fontes do Google), `object-src 'none'`, `base-uri 'none'`, e `frame-ancestors` só do Comunic Chat |
 | Token Yeastar esgotado | cache + refresh em vez de `get_token` por requisição |
 | Usuário de outra empresa ver dados | todas as consultas filtram por `companyId` resolvido do papel; SUPER/PARTNER têm escopo explícito |
 
@@ -40,7 +42,7 @@
 - [ ] `ALLOWED_ORIGINS` com o domínio real do painel.
 - [ ] `PANEL_FRAME_ANCESTORS` revisado (domínios do Comunic Chat/whitelabel).
 - [ ] `TRUST_PROXY=true` atrás do proxy.
-- [ ] Backup do banco cifrado e testado.
+- [ ] Backup do banco cifrado e testado: `scripts/backup.sh` agendado no cron (AES-256/PBKDF2, retenção `BACKUP_KEEP_DAYS`, `.sha256`) e `scripts/restaurar.sh --testar` executado com sucesso. `BACKUP_PASSPHRASE` e `ENCRYPTION_KEY` no Vaultwarden, **nunca** junto dos arquivos de backup.
 
 ## Acesso de emergência (SUPER_ADMIN com senha + autenticador)
 Para manutenção quando o Comunic Chat ou a extensão estiverem fora do ar. Abra `<backend>/painel` direto no navegador → **Acesso de emergência** → usuário, senha e código de 6 dígitos do app autenticador.
