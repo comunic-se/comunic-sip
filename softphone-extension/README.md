@@ -27,6 +27,7 @@ Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chr
 - **Em ligação:** a barra de abas some.
 - **Presença:** avisa o backend (`POST /v1/presence`) quando o registro muda e a cada minuto (`chrome.alarms`), para o painel mostrar Conectado/Desconectado.
 - **Chamadas:** discador, receber (toque suave + notificação do Chrome com Atender/Recusar), mudo, espera, DTMF, transferência cega e assistida (consulta), histórico (CDR do ramal).
+- **Click-to-call:** no Comunic Chat, passe o mouse sobre um telefone e clique em **Ligar**; ou selecione o número e use o clique direito → **Ligar para "…" com Comunic.Chat**. Reconhece formatos brasileiros (+55, DDD com/sem parênteses, fixo e celular) e ignora datas, CPF/CNPJ, valores e campos de digitação. Disca só com o ramal registrado e sem outra chamada em andamento.
 - **Contatos:** busca por nome ou número, criar e editar (nome, telefone, e-mail), ligar. **Não há remoção** — por regra de negócio e porque a API do Helena não oferece.
 - **Ponte com o painel:** o painel de gestão (aberto dentro do Comunic Chat, em iframe) pede a sessão à extensão, então o gestor entra sem colar token. O domínio do painel precisa estar em `externally_connectable`.
 
@@ -38,6 +39,8 @@ Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chr
 | Offscreen document | `src/offscreen.ts` | Roda o SDK do Yeastar (registro SIP, áudio, eventos de chamada) e o toque de chamada recebida (WebAudio). Fica vivo com o popup fechado. |
 | Popup | `src/popup/*` | Interface: Teclado, Contatos, Histórico, telas de chamada e Ajustes |
 | Chamadas | `src/call/` | Tela de chamada e lógica de controle usada pelo popup |
+| Click-to-call | `src/content/click-to-call.ts` | Content script nas páginas do Comunic Chat (`*.wts.chat`, `*.flw.chat`, exceto `api.*`). Não altera o DOM do app (React): o botão "Ligar" fica numa camada própria (Shadow DOM fechado). Build separado em IIFE |
+| Telefones | `src/shared/phone.ts` | Reconhece e normaliza números (DDD + número, sem 55, como a aba Contatos) |
 | Microfone | `src/request-mic.*` | Janela visível que pede permissão de microfone (o offscreen não consegue exibir o pedido) |
 | Tipos de mensagem | `src/shared/messages.ts` | Contrato entre popup, background e offscreen |
 
@@ -54,6 +57,7 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 | `REQUEST_MIC` | offscreen → background | Abrir a janela de permissão de microfone |
 | `CONTACTS_SEARCH`, `CONTACT_SAVE` | popup → background | Buscar/salvar contatos (o background chama o backend) |
 | `GET_REG` | background → offscreen | Status atual do registro (para a presença) |
+| `CLICK_TO_CALL` | página → background | Disca o número (valida, confere ramal registrado e se não há chamada); também usado pelo menu de clique direito |
 | `DIRECTORY` | popup → background | Ramais da empresa para a transferência (`GET /v1/directory`) |
 | `PANEL_SESSION` (externa) | painel → background | O painel pede uma sessão; o background abre `/v1/panel/session` com a sessão captada |
 
@@ -65,7 +69,8 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 | `chrome.storage.session` | `panelJwt` | JWT do backend (12 h) usado pela aba Contatos |
 
 ### Permissões
-- `offscreen`, `storage`, `notifications`, `webRequest`, `alarms` (renovação da assinatura).
+- `offscreen`, `storage`, `notifications`, `webRequest`, `alarms` (renovação da assinatura), `contextMenus` ("Ligar para…").
+- `content_scripts`: páginas do Comunic Chat, para o click-to-call.
 - `host_permissions`: `api.wts.chat` e `api.flw.chat` (para captar a sessão).
 - `optional_host_permissions`: pedidas na hora de ativar o login integrado (backend e PBX).
 - `externally_connectable`: `localhost`, `127.0.0.1` e `*.comunic.chat` — quem pode pedir sessão à extensão (o painel).

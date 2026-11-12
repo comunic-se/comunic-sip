@@ -21,6 +21,18 @@ const options = {
   logLevel: 'info',
 };
 
+// Content script não pode ser módulo ES: build separado em IIFE.
+/** @type {import('esbuild').BuildOptions} */
+const contentOptions = {
+  entryPoints: { 'click-to-call': 'src/content/click-to-call.ts' },
+  bundle: true,
+  format: 'iife',
+  target: 'chrome120',
+  outdir,
+  sourcemap: true,
+  logLevel: 'info',
+};
+
 async function copyStatic() {
   await mkdir(outdir, { recursive: true });
   await Promise.all([
@@ -38,12 +50,13 @@ async function copyStatic() {
 
 if (watch) {
   const ctx = await context(options);
-  await ctx.rebuild();
+  const ctxContent = await context(contentOptions);
+  await Promise.all([ctx.rebuild(), ctxContent.rebuild()]);
   await copyStatic();
-  await ctx.watch();
+  await Promise.all([ctx.watch(), ctxContent.watch()]);
   console.log('esbuild observando mudanças... (Ctrl+C para sair)');
 } else {
-  await build(options);
+  await Promise.all([build(options), build(contentOptions)]);
   await copyStatic();
   console.log('Build concluído em dist/. Carregue essa pasta como extensão sem compactação.');
 }

@@ -408,7 +408,7 @@ async function getHistory(): Promise<HistoryItem[]> {
 chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) => {
   if (raw.target !== 'offscreen') return;
   if (raw.type === 'GET_REG') {
-    sendResponse({ status: regStatus });
+    sendResponse({ status: regStatus, busy: isBusy() });
     return undefined;
   }
   if (raw.type === 'GET_HISTORY') {

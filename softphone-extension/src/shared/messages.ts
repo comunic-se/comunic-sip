@@ -79,6 +79,8 @@ export type ToBackground =
   | { target: 'background'; type: 'CONTACTS_SEARCH'; query: string }
   // Diretório de ramais da empresa (transferência)
   | { target: 'background'; type: 'DIRECTORY' }
+  // Click-to-call vindo da página do Comunic Chat
+  | { target: 'background'; type: 'CLICK_TO_CALL'; number: string }
   | { target: 'background'; type: 'CONTACT_SAVE'; contact: Contact }
   // offscreen -> background
   | { target: 'background'; type: 'STATUS'; status: RegStatus; detail?: string }

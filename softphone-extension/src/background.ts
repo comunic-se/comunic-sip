@@ -1,6 +1,7 @@
 // Service worker: orquestra. Cria/garante o offscreen, repassa mensagens
 // entre popup e offscreen e guarda o último status de registro e da chamada.
 import type { AnyMessage, CallState, StatusSnapshot, SdkConfig } from './shared/messages';
+import { toDialable, formatBR } from './shared/phone';
 
 const NOTIF_ID = 'comunic-call';
 const MISSED_ID = 'comunic-missed';
@@ -177,6 +178,40 @@ async function renewSignature(): Promise<void> {
     renewing = false;
   }
 }
+
+// ---------- Click-to-call (página do Comunic Chat e menu de clique direito) ----------
+/** Disca se o número for válido, o ramal estiver registrado e não houver chamada em andamento. */
+async function clickToCall(input: string): Promise<{ ok: boolean; error?: string }> {
+  const number = toDialable(input);
+  if (!number) return { ok: false, error: 'Isso não parece um telefone válido (use DDD + número).' };
+  const has = await chrome.offscreen.hasDocument?.();
+  const reg = has
+    ? ((await chrome.runtime.sendMessage({ target: 'offscreen', type: 'GET_REG' }).catch(() => null)) as { status?: string; busy?: boolean } | null)
+    : null;
+  if (reg?.status !== 'registered') return { ok: false, error: 'Seu ramal não está conectado. Abra a extensão Comunic.Chat.' };
+  if (reg.busy) return { ok: false, error: 'Você já está em uma ligação. Encerre-a antes de ligar para outro número.' };
+  sendToOffscreen({ target: 'offscreen', type: 'CALL', number });
+  return { ok: true };
+}
+
+const C2C_MENU = 'comunic-c2c';
+const COMUNIC_PAGES = ['https://*.wts.chat/*', 'https://*.flw.chat/*'];
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: C2C_MENU, title: 'Ligar para "%s" com Comunic.Chat', contexts: ['selection'], documentUrlPatterns: COMUNIC_PAGES,
+  }, () => void chrome.runtime.lastError);
+});
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId !== C2C_MENU || !info.selectionText) return;
+  const r = await clickToCall(info.selectionText);
+  const n = toDialable(info.selectionText);
+  chrome.notifications.create('comunic-c2c', {
+    type: 'basic', iconUrl: chrome.runtime.getURL('icon-128.png'),
+    title: r.ok ? 'Ligando…' : 'Não foi possível ligar',
+    message: r.ok && n ? formatBR(n) : r.error ?? '',
+    priority: 1,
+  });
+});
 
 // ---------- Presença (status "Conectado" no painel) ----------
 // Avisa o backend quando o registro muda e a cada minuto enquanto registrado.
@@ -357,6 +392,10 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
           height: 260,
         });
         break;
+      }
+      case 'CLICK_TO_CALL': {
+        sendResponse(await clickToCall(raw.number));
+        return;
       }
       case 'DIRECTORY': {
         sendResponse(await backendContacts('/v1/directory', { method: 'GET' }));
