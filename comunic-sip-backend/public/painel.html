@@ -282,11 +282,13 @@ function showApp(sess){
 }
 
 async function api(path,opts={}){
-  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json',...(JWT?{Authorization:'Bearer '+JWT}:{}),...(opts.headers||{})}});
+  // Content-Type só com corpo: o Fastify recusa (400) JSON vazio, ex.: DELETE sem body.
+  const r=await fetch(path,{...opts,headers:{...(opts.body!=null?{'Content-Type':'application/json'}:{}),...(JWT?{Authorization:'Bearer '+JWT}:{}),...(opts.headers||{})}});
   // 401 com sessão aberta = sessão expirou. Sem sessão (ex.: login de emergência) = credencial errada.
   if(r.status===401&&JWT){logout();throw new Error('sessão expirada');}
   const b=await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(b.error||('HTTP '+r.status));
+  // Erros nossos vêm em b.error; os do próprio Fastify trazem o detalhe em b.message.
+  if(!r.ok) throw new Error((b.message&&b.error&&b.statusCode)?b.message:(b.error||('HTTP '+r.status)));
   return b;
 }
 
