@@ -25,6 +25,8 @@ model Pbx {
   cdrSyncError    String?   @map("cdr_sync_error")
   // Horário da chamada mais nova já lida do PBX (marcador da coleta incremental)
   cdrCursorAt     DateTime? @map("cdr_cursor_at")
+  // Maior ID de gravação já lido (recording/list é ordenado por id)
+  recCursorId     Int?      @map("rec_cursor_id")
   companies       Company[]
 
   @@map("pbx")
@@ -109,6 +111,9 @@ model Call {
   callDuration    Int?      @map("call_duration")
   talkDuration    Int?      @map("talk_duration")
   recordingFile   String?   @map("recording_file")
+  // Gravação no PBX (recording/list). O áudio NÃO é guardado aqui: é buscado sob demanda.
+  recordingId     Int?      @map("recording_id")
+  recordingSize   Int?      @map("recording_size")
   trunk           String?
   did             String?
   raw             Json?
@@ -117,6 +122,7 @@ model Call {
   @@index([companyId, startedAt])
   @@index([companyId, helenaUserId])
   @@index([otherUserId])
+  @@index([companyId, recordingId])
   @@map("calls")
 }
 

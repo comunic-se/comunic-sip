@@ -26,7 +26,7 @@ export interface Scope {
 export type Permission =
   | 'provision_company' | 'manage_pbx' | 'manage_branding' | 'manage_roles' | 'manage_access'
   | 'view_extensions' | 'manage_extensions'
-  | 'view_dashboard' | 'view_cdr' | 'export_cdr' | 'play_recording';
+  | 'view_dashboard' | 'view_cdr' | 'export_cdr' | 'play_recording' | 'download_recording';
 
 export type DataScope = 'all' | 'partner' | 'company' | 'department' | 'self';
 
@@ -34,16 +34,16 @@ const MATRIX: Record<Role, Partial<Record<Permission, DataScope>>> = {
   SUPER_ADMIN: {
     provision_company: 'all', manage_pbx: 'all', manage_branding: 'all', manage_roles: 'all', manage_access: 'all',
     view_extensions: 'all', manage_extensions: 'all',
-    view_dashboard: 'all', view_cdr: 'all', export_cdr: 'all', play_recording: 'all',
+    view_dashboard: 'all', view_cdr: 'all', export_cdr: 'all', play_recording: 'all', download_recording: 'all',
   },
   PARTNER_ADMIN: {
     provision_company: 'partner', manage_branding: 'partner', manage_roles: 'partner', manage_access: 'partner',
     view_extensions: 'partner', manage_extensions: 'partner',
-    view_dashboard: 'partner', view_cdr: 'partner', export_cdr: 'partner', play_recording: 'partner',
+    view_dashboard: 'partner', view_cdr: 'partner', export_cdr: 'partner', play_recording: 'partner', download_recording: 'partner',
   },
   COMPANY_ADMIN: {
     manage_access: 'company', view_extensions: 'company', manage_extensions: 'company',
-    view_dashboard: 'company', view_cdr: 'company', export_cdr: 'company', play_recording: 'company',
+    view_dashboard: 'company', view_cdr: 'company', export_cdr: 'company', play_recording: 'company', download_recording: 'company',
   },
   COMPANY_VIEWER: {
     view_extensions: 'company', view_dashboard: 'company', view_cdr: 'company',
@@ -58,7 +58,7 @@ const MATRIX: Record<Role, Partial<Record<Permission, DataScope>>> = {
 
 /** Permissões ajustáveis por usuário (escopo da empresa). */
 export const GRANTABLE: Permission[] = [
-  'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording', 'manage_access',
+  'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording', 'download_recording', 'manage_access',
 ];
 /** Só o master (escopo all/partner em manage_access) mexe nestas. */
 export const MASTER_ONLY: Permission[] = ['manage_access'];
@@ -107,7 +107,7 @@ export async function effectiveScope(user: Caller, perm: Permission): Promise<Da
 export async function effectivePermissions(user: Caller): Promise<Partial<Record<Permission, DataScope>>> {
   const all: Permission[] = [
     'provision_company', 'manage_pbx', 'manage_branding', 'manage_roles', 'manage_access',
-    'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording',
+    'view_extensions', 'manage_extensions', 'view_dashboard', 'view_cdr', 'export_cdr', 'play_recording', 'download_recording',
   ];
   const out: Partial<Record<Permission, DataScope>> = {};
   for (const p of all) {

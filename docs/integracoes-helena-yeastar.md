@@ -46,6 +46,11 @@ Base: `https://<pbx>:<porta-do-portal>` (padrão 8088). Header `User-Agent` obri
 - **SDK não serve para isso:** o `cdrQuery` do Linkus SDK só traz o histórico do próprio ramal e não tem gravações.
 - Status no painel: Empresas → PBX → coluna "Coleta de chamadas" e botão **Sincronizar**.
 
+### Gravações
+- **Vínculo:** na mesma rodada da coleta, `GET /openapi/v1.0/recording/list?sort_by=id&order_by=desc` (marcador `pbx.rec_cursor_id`, relendo as últimas 1000 para pegar gravações que chegaram antes do CDR). Cada gravação traz o `uid` do CDR e é ligada à chamada já gravada; gravações de outros clientes do PBX são ignoradas (as chamadas deles nem estão no banco).
+- **Áudio:** nunca armazenado. Ao ouvir/baixar, o backend chama `recording/download?id=` (a URL devolvida vale 30 min), baixa de `{base_url}{download_resource_url}?access_token=` e repassa ao navegador.
+- **Formato:** o definido no PBX (Call Features → Recording → Recording File Format). Em `.mp3` o PBX aceita só 1 download por vez.
+
 ### Próximos passos
 - **Tempo real (opcional, produção):** Webhook Event Push (evento 30012) validando `X-Signature` (HMAC-SHA256 do corpo bruto), somando-se à coleta periódica.
 - **Gravações:** `recording/list` + `recording/download` via proxy autenticado no backend.

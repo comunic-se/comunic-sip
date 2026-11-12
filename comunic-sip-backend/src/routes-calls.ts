@@ -10,6 +10,9 @@ import { requireAuth, type PanelToken } from './auth.js';
 import { effectiveScope, type Permission } from './rbac.js';
 import { listAgentsCached } from './helena-admin.js';
 import { syncPbx } from './cdr-sync.js';
+import { decryptSecret } from './crypto.js';
+import { getToken, openapiGet, type PbxCreds } from './yeastar.js';
+import { Readable } from 'node:stream';
 
 const TZ = process.env.PBX_TIMEZONE_OFFSET ?? '-03:00';
 const TZ_MIN = (() => { const m = TZ.match(/^([+-])(\d{2}):(\d{2})$/); return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : -180; })();
@@ -105,8 +108,77 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
         fromNumber: c.fromNumber, fromName: c.fromName, toNumber: c.toNumber, toName: c.toName,
         extension: c.extensionNumber, agent: c.helenaUserId ? names.get(c.helenaUserId) ?? null : null,
         talk: c.talkDuration, ring: c.ringDuration, did: c.did, trunk: c.trunk,
+        hasRecording: c.recordingId != null,
       })),
     };
+  });
+
+  // ---- Gravações: lista (só chamadas com gravação, no escopo de play_recording) ----
+  app.get('/v1/panel/recordings', { preHandler: requireAuth('play_recording') }, async (req, reply) => {
+    const user = req.user as PanelToken;
+    const q = req.query as Q;
+    const sw = await scopedWhere(user, 'play_recording', q);
+    if (!sw) return reply.code(403).send({ error: 'fora do seu escopo' });
+    const where = { AND: [sw.where, { recordingId: { not: null } }] };
+    const pageSize = Math.min(100, Math.max(10, Number(q.pageSize) || 50));
+    const page = Math.max(1, Number(q.page) || 1);
+    const [total, rows, names] = await Promise.all([
+      prisma.call.count({ where }),
+      prisma.call.findMany({ where, orderBy: { startedAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
+      nameMap(sw.companyId),
+    ]);
+    return {
+      total, page, pageSize,
+      canDownload: Boolean(await effectiveScope(user, 'download_recording')),
+      items: rows.map((c) => ({
+        id: c.id, startedAt: c.startedAt, direction: c.direction, status: c.status,
+        fromNumber: c.fromNumber, fromName: c.fromName, toNumber: c.toNumber, toName: c.toName,
+        agent: c.helenaUserId ? names.get(c.helenaUserId) ?? null : null, talk: c.talkDuration, size: c.recordingSize,
+      })),
+    };
+  });
+
+  // ---- Gravações: áudio (proxy autenticado; ?download=1 baixa) ----
+  // O endereço do PBX e o token nunca chegam ao navegador. Nada é guardado em disco.
+  app.get('/v1/panel/calls/:id/recording', { preHandler: requireAuth('play_recording') }, async (req, reply) => {
+    const user = req.user as PanelToken;
+    const id = String((req.params as any).id);
+    const download = String((req.query as any).download ?? '') === '1';
+    if (download && !(await effectiveScope(user, 'download_recording'))) {
+      return reply.code(403).send({ error: 'você não tem permissão para baixar gravações' });
+    }
+    const call = await prisma.call.findUnique({ where: { id } });
+    if (!call || call.recordingId == null || !call.pbxId) return reply.code(404).send({ error: 'gravação não encontrada' });
+
+    // A pessoa precisa enxergar esta chamada no escopo de play_recording.
+    const sw = await scopedWhere(user, 'play_recording', { companyId: call.companyId ?? '*' });
+    if (!sw || !(await prisma.call.count({ where: { AND: [sw.where, { id }] } }))) {
+      return reply.code(403).send({ error: 'fora do seu escopo' });
+    }
+    const pbx = await prisma.pbx.findUnique({ where: { id: call.pbxId } });
+    if (!pbx?.clientIdEnc || !pbx.clientSecretEnc) return reply.code(400).send({ error: 'API do PBX não configurada' });
+    const creds: PbxCreds = { baseUrl: pbx.baseUrl, accessId: decryptSecret(pbx.clientIdEnc), accessKey: decryptSecret(pbx.clientSecretEnc) };
+
+    let upstream: Response;
+    try {
+      const url = await downloadUrl(creds, call.recordingId);
+      upstream = await fetch(`${pbx.baseUrl}${url}?access_token=${encodeURIComponent(await getToken(creds))}`, { headers: { 'User-Agent': 'Comunic.SIP-backend/0.1' } });
+      if (!upstream.ok || !upstream.body) { dlCache.delete(call.recordingId); throw new Error(`HTTP ${upstream.status}`); }
+    } catch (e: any) {
+      req.log.warn({ err: String(e?.message ?? e), callId: id }, 'falha ao buscar gravação no PBX');
+      return reply.code(502).send({ error: 'não consegui obter a gravação no PBX' });
+    }
+
+    await auditRecording(user, call.companyId, id, download);
+    const ext = (call.recordingFile?.match(/\.(wav|mp3)$/i)?.[1] ?? 'wav').toLowerCase();
+    const when = call.startedAt ? new Date(+call.startedAt + TZ_MIN * 60_000).toISOString().slice(0, 16).replace(/[-:T]/g, '') : 'sem-data';
+    const name = `gravacao-${when}-${(call.fromNumber ?? '').replace(/\D/g, '')}-${(call.toNumber ?? '').replace(/\D/g, '')}.${ext}`;
+    reply.header('Content-Type', upstream.headers.get('content-type') ?? (ext === 'mp3' ? 'audio/mpeg' : 'audio/wav'));
+    const len = upstream.headers.get('content-length');
+    if (len) reply.header('Content-Length', len);
+    reply.header('Cache-Control', 'no-store');
+    reply.header('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${name}"`);
+    return reply.send(Readable.fromWeb(upstream.body as any));
   });
 
   // ---- Exportar (CSV) ----
@@ -205,5 +277,28 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
     await prisma.auditLog.create({ data: { actor: user.userId, action: 'cdr_sync_manual', payload: { pbxId: id, inserted } } });
     if (after?.cdrSyncError) return reply.code(502).send({ error: after.cdrSyncError });
     return { ok: true, inserted, syncedAt: after?.cdrSyncedAt };
+  });
+}
+
+// URL de download do PBX vale 30 min: guarda por 25 para não pedir a cada play/seek.
+const dlCache = new Map<number, { url: string; exp: number }>();
+async function downloadUrl(creds: PbxCreds, recordingId: number): Promise<string> {
+  const hit = dlCache.get(recordingId);
+  if (hit && hit.exp > Date.now()) return hit.url;
+  const res = await openapiGet(creds, 'v1.0/recording/download', { id: recordingId });
+  const url = String(res.download_resource_url ?? '');
+  if (!url.startsWith('/')) throw new Error('PBX não devolveu a URL da gravação');
+  dlCache.set(recordingId, { url, exp: Date.now() + 25 * 60_000 });
+  return url;
+}
+
+// Auditoria: todo download; "ouvir" no máximo 1 registro por pessoa/chamada a cada 10 min.
+const heard = new Map<string, number>();
+async function auditRecording(user: PanelToken, companyId: string | null, callId: string, download: boolean): Promise<void> {
+  const key = `${user.userId}|${callId}`;
+  if (!download && (heard.get(key) ?? 0) > Date.now() - 10 * 60_000) return;
+  if (!download) heard.set(key, Date.now());
+  await prisma.auditLog.create({
+    data: { companyId, actor: user.userId, action: download ? 'recording_download' : 'recording_play', payload: { callId } },
   });
 }

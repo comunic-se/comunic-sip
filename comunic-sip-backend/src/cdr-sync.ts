@@ -111,6 +111,46 @@ export function mapCdr(pbxId: string, item: any, map: CompanyMap) {
   };
 }
 
+const REC_ID_MARGIN = 1000; // relê as últimas N gravações: a gravação pode aparecer antes do CDR ser coletado
+
+/**
+ * Liga gravações do PBX (recording/list) às chamadas já gravadas, pelo `uid` do CDR.
+ * Só chamadas das empresas cadastradas existem em `calls`, então gravações de outros
+ * clientes do PBX são ignoradas. O áudio não é baixado aqui.
+ */
+async function syncRecordings(pbx: { id: string; recCursorId: number | null }, creds: PbxCreds): Promise<number> {
+  const cursor = pbx.recCursorId ?? 0;
+  const backfill = !cursor;
+  const stopAt = Date.now() - BACKFILL_DAYS * 86_400_000;
+  const maxPages = backfill ? MAX_PAGES_BACKFILL : Math.ceil(REC_ID_MARGIN / PAGE_SIZE) + MAX_PAGES_INCREMENTAL;
+  let maxId = cursor, linked = 0;
+  for (let page = 1; page <= maxPages; page++) {
+    const res = await openapiGet(creds, 'v1.0/recording/list', { page, page_size: PAGE_SIZE, sort_by: 'id', order_by: 'desc' });
+    const items: any[] = Array.isArray(res.data) ? res.data : [];
+    if (!items.length) break;
+    for (const it of items) if (Number(it.id) > maxId) maxId = Number(it.id);
+    const byUid = new Map(items.filter((it) => it.uid).map((it) => [String(it.uid), it]));
+    const pending = await prisma.call.findMany({
+      where: { pbxId: pbx.id, uid: { in: [...byUid.keys()] }, recordingId: null },
+      select: { id: true, uid: true },
+    });
+    for (const c of pending) {
+      const it = byUid.get(String(c.uid))!;
+      await prisma.call.update({
+        where: { id: c.id },
+        data: { recordingId: Number(it.id), recordingFile: String(it.file ?? '') || null, recordingSize: Number(it.size) || null },
+      });
+      linked++;
+    }
+    const minId = Math.min(...items.map((it) => Number(it.id)));
+    if (!backfill && minId <= cursor - REC_ID_MARGIN) break;
+    if (backfill && items.some((it) => { const t = parseCdrTime({ time: it.time }); return t && +t < stopAt; })) break;
+    if (items.length < PAGE_SIZE) break;
+  }
+  if (maxId > cursor) await prisma.pbx.update({ where: { id: pbx.id }, data: { recCursorId: maxId } });
+  return linked;
+}
+
 export async function syncPbx(pbxId: string, log: FastifyBaseLogger): Promise<number> {
   if (running.has(pbxId)) return 0;
   running.add(pbxId);
@@ -140,6 +180,8 @@ export async function syncPbx(pbxId: string, log: FastifyBaseLogger): Promise<nu
       if (rows.some((r) => r.startedAt && +r.startedAt < stopAt) || items.length < PAGE_SIZE) break;
     }
     if (newest) await prisma.pbx.update({ where: { id: pbxId }, data: { cdrCursorAt: new Date(newest) } });
+    const recs = await syncRecordings(pbx, creds);
+    if (recs) log.info({ pbxId, recs }, 'gravações vinculadas');
     await prisma.pbx.update({ where: { id: pbxId }, data: { cdrSyncedAt: new Date(), cdrSyncError: null } });
     if (inserted) log.info({ pbxId, inserted }, 'CDR sincronizado');
   } catch (e: any) {

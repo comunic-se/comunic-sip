@@ -60,7 +60,8 @@ Escopos: `all` > `partner` > `company` > `department` > `self`. "—" = sem aces
 | `view_dashboard` | all | partner | company | company | department | self |
 | `view_cdr` | all | partner | company | company | department | self |
 | `export_cdr` | all | partner | company | — | — | — |
-| `play_recording` | all | partner | company | — | department | self |
+| `play_recording` (ouvir) | all | partner | company | — | department | self |
+| `download_recording` (baixar) | all | partner | company | — | — | — |
 
 Fonte de verdade: `MATRIX` em `src/rbac.ts`.
 
@@ -72,7 +73,7 @@ Fonte de verdade: `MATRIX` em `src/rbac.ts`.
 - Voltar ao padrão do papel apaga o ajuste (a pessoa volta a seguir o papel; se o perfil dela mudar no Comunic Chat, recebe o novo padrão).
 - Ponto azul no interruptor = ajustado em relação ao padrão.
 
-Permissões ajustáveis: ver ramais, alterar ramais, dashboard, chamadas, exportar, gravações e **conceder acessos** — todas com escopo da empresa.
+Permissões ajustáveis: ver ramais, alterar ramais, dashboard, chamadas, exportar, ouvir gravações, baixar gravações e **conceder acessos** — todas com escopo da empresa.
 
 Regras de segurança:
 | Regra | Por quê |
@@ -91,7 +92,7 @@ Regras de segurança:
 | Acessos (interruptor por pessoa e permissão) | `manage_access` | **pronto** |
 | Dashboard (indicadores, por dia/hora, por atendente) | `view_dashboard` | **pronto** — períodos Hoje / 7 / 30 dias |
 | Chamadas (lista com filtros; exportar CSV com `export_cdr`) | `view_cdr` / `export_cdr` | **pronto** |
-| Gravações | `play_recording` | em breve |
+| Gravações (ouvir no player; baixar com `download_recording`) | `play_recording` / `download_recording` | **pronto** — também há botão de ouvir na lista de Chamadas |
 | Empresas (cadastro, PBX, faixas, token, ativar/desativar) | `provision_company` / `manage_pbx` | **pronto** — só aparece para SUPER/PARTNER; aba PBX só para SUPER |
 
 ## Regras do módulo Empresas

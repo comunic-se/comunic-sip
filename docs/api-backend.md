@@ -123,7 +123,9 @@ Dados coletados do PBX pela OpenAPI (ver `integracoes-helena-yeastar.md`). Filtr
 | GET | `/v1/panel/calls` | `view_cdr` | Lista paginada. Filtros: `from`, `to` (YYYY-MM-DD, fuso do PBX), `type` (`Inbound`/`Outbound`/`Internal`), `status` (`answered`/`missed`), `q` (número ou nome), `userId`, `page`, `pageSize` (≤100) |
 | GET | `/v1/panel/calls/export` | `export_cdr` (+ escopo de `view_cdr`) | CSV com `;` e BOM (abre direto no Excel), até 50 mil linhas. Grava `cdr_export` no `audit_log` |
 | GET | `/v1/panel/dashboard` | `view_dashboard` | `kpis` (recebidas, atendidas, perdidas, taxa de atendimento, efetuadas, internas, conversa média/total, espera média), `byDay`, `byHour`, `byUser`, `syncedAt`, `apiConfigured` |
-| POST | `/v1/panel/pbx/:id/sync` | `manage_pbx` | Força a coleta agora. Auditado |
+| POST | `/v1/panel/pbx/:id/sync` | `manage_pbx` | Força a coleta agora (chamadas + vínculo das gravações). Auditado |
+| GET | `/v1/panel/recordings` | `play_recording` | Chamadas com gravação, no escopo da pessoa; mesmos filtros de `/calls`; `canDownload` indica se pode baixar |
+| GET | `/v1/panel/calls/:id/recording` | `play_recording` (+ `download_recording` com `?download=1`) | Áudio por **proxy autenticado**: o backend confere o escopo, pede a URL ao PBX (`recording/download`, cache de 25 min) e repassa o arquivo. Endereço e token do PBX nunca chegam ao navegador; nada é gravado em disco. Auditoria: `recording_download` sempre; `recording_play` 1× por pessoa/chamada a cada 10 min |
 
 O cadastro do PBX (`POST/PATCH /v1/panel/pbx`) aceita `apiClientId` + `apiClientSecret` (Integrations → API), testados antes de salvar e cifrados; o `GET` informa só `apiConfigured`, `cdrSyncedAt` e `cdrSyncError`.
 

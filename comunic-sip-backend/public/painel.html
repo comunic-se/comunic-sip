@@ -141,6 +141,13 @@
   .pager{display:flex;align-items:center;gap:8px;margin-top:12px}
   .empty-cdr{padding:40px 20px;text-align:center;color:var(--muted)}
   @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+  /* GRAVAÇÕES */
+  .player{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.18);padding:10px 12px 10px 16px;width:min(760px,calc(100% - 32px))}
+  .player .pl-info{min-width:0;flex:0 1 220px} .player .u-name,.player .u-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player audio{flex:1 1 auto;height:36px;min-width:0}
+  .act svg{width:14px;height:14px}
+  .rec-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--blue);cursor:pointer;margin-left:8px;vertical-align:middle}
+  .rec-btn:hover{border-color:var(--blue);background:var(--blue-softer)} .rec-btn svg{width:13px;height:13px}
   /* hidden sempre vence (display:flex anularia o atributo) */
   [hidden]{display:none!important}
   .role-tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:var(--line);color:var(--muted)}
@@ -253,9 +260,28 @@
 
         <!-- GRAVAÇÕES -->
         <section class="view" data-view="gravacoes" hidden>
-          <div class="page-head"><div><h1 class="page-title">Gravações</h1><div class="page-sub">Áudios das chamadas (proxy autenticado)</div></div></div>
-          <div class="card"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/></svg><div class="t">Em breve</div><div>Reprodução e download das gravações, por escopo.</div></div></div>
+          <div class="page-head"><div><h1 class="page-title">Gravações</h1><div class="page-sub" id="rc-sub">Gravações de chamadas</div></div></div>
+          <div class="toolbar filters">
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="rc-q" placeholder="Número ou nome…" autocomplete="off" /></div>
+            <input type="date" class="field fdate" id="rc-from"><span class="muted">até</span><input type="date" class="field fdate" id="rc-to">
+            <select class="field fsel" id="rc-type"><option value="">Todos os tipos</option><option value="Inbound">Recebidas</option><option value="Outbound">Efetuadas</option><option value="Internal">Internas</option></select>
+          </div>
+          <div class="card">
+            <table><thead><tr><th>Data/hora</th><th>Tipo</th><th>De</th><th>Para</th><th>Atendente</th><th class="num">Duração</th><th style="text-align:right">Ações</th></tr></thead>
+            <tbody id="rc-rows"></tbody></table>
+          </div>
+          <div class="pager"><span class="muted" id="rc-count"></span><div class="spacer"></div><button class="act" id="rc-prev">Anterior</button><button class="act" id="rc-next">Próxima</button></div>
+          <div class="appmsg err" id="rc-msg"></div>
+          <div class="muted" style="font-size:12px;margin-top:10px">As gravações ficam no PBX; o painel só as reproduz. Cada vez que alguém ouve ou baixa, fica registrado na auditoria.</div>
         </section>
+
+        <!-- Player de gravação (fixo no rodapé) -->
+        <div class="player" id="player" hidden>
+          <div class="pl-info"><div class="u-name" id="pl-title">—</div><div class="u-sub" id="pl-sub"></div></div>
+          <audio id="pl-audio" controls preload="none"></audio>
+          <button class="act" id="pl-dl" hidden>Baixar</button>
+          <button class="m-close" id="pl-close" title="Fechar">×</button>
+        </div>
 
         <!-- EMPRESAS -->
         <section class="view" data-view="empresas" hidden>
@@ -427,6 +453,7 @@ function switchView(name){
   if(name==='acessos') loadAcessos();
   if(name==='dashboard') loadDashboard();
   if(name==='chamadas') loadChamadas();
+  if(name==='gravacoes') loadGravacoes();
 }
 document.querySelectorAll('.nav-item').forEach(it=>it.addEventListener('click',()=>switchView(it.dataset.view)));
 
@@ -755,13 +782,76 @@ async function loadChamadas(){
         '<td>'+partyHtml(c.fromNumber,c.fromName)+'</td><td>'+partyHtml(c.toNumber,c.toName)+'</td>'+
         '<td>'+(c.agent?esc(c.agent):'<span class="muted">—</span>')+'</td>'+
         '<td><span class="badge '+st[0]+'">'+esc(st[1])+'</span></td>'+
-        '<td class="num">'+(c.status==='ANSWERED'?fmtDur(c.talk):'—')+'</td></tr>';}).join('');
+        '<td class="num">'+(c.status==='ANSWERED'?fmtDur(c.talk):'—')+(c.hasRecording&&can('play_recording')?'<button class="rec-btn" title="Ouvir gravação" data-rec="'+esc(c.id)+'">'+PLAY_ICON+'</button>':'')+'</td></tr>';}).join('');
+    rows.querySelectorAll('[data-rec]').forEach(b=>{const c=r.items.find(x=>x.id===b.dataset.rec);b.onclick=()=>playRecording(c);});
   }catch(e){rows.innerHTML='';$('#ch-msg').textContent=e.message;}
 }
 
+/* ---------- Gravações ---------- */
+let RC_PAGE=1, RC_TOTAL=0, PL_URL=null, PL_CALL=null;
+function rcFilters(){const p=new URLSearchParams();for(const [k,id] of [['q','#rc-q'],['from','#rc-from'],['to','#rc-to'],['type','#rc-type']]){const v=$(id).value.trim();if(v)p.set(k,v);}return p;}
+let rcTimer; ['#rc-q','#rc-from','#rc-to','#rc-type'].forEach(id=>$(id).addEventListener(id==='#rc-q'?'input':'change',()=>{clearTimeout(rcTimer);rcTimer=setTimeout(()=>{RC_PAGE=1;loadGravacoes();},300);}));
+$('#rc-prev').onclick=()=>{if(RC_PAGE>1){RC_PAGE--;loadGravacoes();}};
+$('#rc-next').onclick=()=>{if(RC_PAGE*50<RC_TOTAL){RC_PAGE++;loadGravacoes();}};
+const PLAY_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.52.85l11.1-6.86a1 1 0 000-1.7L9.52 4.29A1 1 0 008 5.14z"/></svg>';
+async function loadGravacoes(){
+  $('#rc-msg').textContent=''; $('#rc-sub').textContent=PERMS.play_recording==='self'?'Suas gravações':(PERMS.play_recording==='department'?'Gravações do seu setor':'Gravações da empresa');
+  if(!$('#rc-from').value){const r=rangeDates(7);$('#rc-from').value=r.from;$('#rc-to').value=r.to;}
+  const rows=$('#rc-rows'); rows.innerHTML='<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
+  try{
+    const p=rcFilters();p.set('page',RC_PAGE);p.set('pageSize',50);
+    const r=await api('/v1/panel/recordings?'+p);
+    RC_TOTAL=r.total;
+    $('#rc-count').textContent=r.total?((RC_PAGE-1)*50+1)+'–'+Math.min(RC_PAGE*50,r.total)+' de '+r.total.toLocaleString('pt-BR'):'';
+    $('#rc-prev').disabled=RC_PAGE<=1; $('#rc-next').disabled=RC_PAGE*50>=r.total;
+    if(!r.items.length){rows.innerHTML='<tr><td colspan="7" class="empty-cdr">Nenhuma gravação no período.</td></tr>';return;}
+    rows.innerHTML='';
+    for(const c of r.items){
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td>'+
+        '<td><span class="dir">'+(DIR_ICON[c.direction]||esc(c.direction||'—'))+'</span></td>'+
+        '<td>'+partyHtml(c.fromNumber,c.fromName)+'</td><td>'+partyHtml(c.toNumber,c.toName)+'</td>'+
+        '<td>'+(c.agent?esc(c.agent):'<span class="muted">—</span>')+'</td><td class="num">'+fmtDur(c.talk)+'</td>'+
+        '<td><div class="row-actions"><button class="act primary act-play">'+PLAY_ICON+'Ouvir</button>'+(r.canDownload?'<button class="act act-dl">Baixar</button>':'')+'</div></td>';
+      tr.querySelector('.act-play').onclick=()=>playRecording(c);
+      const dl=tr.querySelector('.act-dl'); if(dl) dl.onclick=()=>downloadRecording(c);
+      rows.appendChild(tr);
+    }
+  }catch(e){rows.innerHTML='';$('#rc-msg').textContent=e.message;}
+}
+/* Busca o áudio com o token (o <audio> não envia cabeçalho) e toca a partir da memória. */
+async function fetchRecording(id,download){
+  const r=await fetch('/v1/panel/calls/'+encodeURIComponent(id)+'/recording'+(download?'?download=1':''),{headers:{Authorization:'Bearer '+JWT}});
+  if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.error||('HTTP '+r.status));}
+  return r;
+}
+async function playRecording(c){
+  const pl=$('#player'), au=$('#pl-audio');
+  $('#pl-title').textContent=(c.fromName||c.fromNumber||'—')+' → '+(c.toName||c.toNumber||'—');
+  $('#pl-sub').textContent='Carregando…'; pl.hidden=false; PL_CALL=c;
+  $('#pl-dl').hidden=!can('download_recording');
+  try{
+    const r=await fetchRecording(c.id,false);
+    const blob=await r.blob();
+    if(PL_URL) URL.revokeObjectURL(PL_URL);
+    PL_URL=URL.createObjectURL(blob); au.src=PL_URL; au.play().catch(()=>{});
+    $('#pl-sub').textContent=(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR'):'')+(c.agent?' · '+c.agent:'');
+  }catch(e){$('#pl-sub').textContent=e.message;}
+}
+async function downloadRecording(c){
+  try{
+    const r=await fetchRecording(c.id,true);
+    const name=((r.headers.get('content-disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'gravacao.wav';
+    const blob=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }catch(e){alertMsg(e.message);}
+}
+function alertMsg(m){const v=document.querySelector('.view:not([hidden]) .appmsg');if(v){v.style.color='';v.textContent=m;}}
+$('#pl-dl').onclick=()=>{if(PL_CALL) downloadRecording(PL_CALL);};
+$('#pl-close').onclick=()=>{const au=$('#pl-audio');au.pause();au.removeAttribute('src');au.load();if(PL_URL){URL.revokeObjectURL(PL_URL);PL_URL=null;}$('#player').hidden=true;PL_CALL=null;};
+
 /* ---------- Acessos ---------- */
 const ROLE_LABEL={SUPER_ADMIN:'Master',PARTNER_ADMIN:'Master do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};
-const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Gravações',manage_access:'Conceder acessos'};
+const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Ouvir gravações',download_recording:'Baixar gravações',manage_access:'Conceder acessos'};
 const SRC_TIP={master:'Master: acesso total',role:'Padrão do papel',granted:'Concedida (além do papel)',denied:'Retirada (o papel daria)',none:'Desligada'};
 let ACC=null;
 $('#acc-search').addEventListener('input',renderAcessos);

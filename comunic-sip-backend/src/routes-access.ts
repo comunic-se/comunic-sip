@@ -26,6 +26,7 @@ const LABELS: Record<string, string> = {
   view_cdr: 'Ver chamadas da empresa',
   export_cdr: 'Exportar chamadas',
   play_recording: 'Ouvir gravações da empresa',
+  download_recording: 'Baixar gravações da empresa',
   manage_access: 'Conceder e retirar acessos',
 };
 
