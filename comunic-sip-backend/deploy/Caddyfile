@@ -1,10 +1,20 @@
 # Comunic.SIP — proxy HTTPS da VM dedicada (usado por docker-compose.caddy.yml).
 # Os cabeçalhos de segurança (CSP, frame-ancestors, nosniff...) vêm da própria API.
+# DOMAIN pode ser um domínio ou um IP público. Para IP, o Let's Encrypt só emite no
+# perfil "shortlived" (certificado de ~6 dias, renovado sozinho pelo Caddy): o
+# gerar-env.sh grava ACME_PROFILE=shortlived nesse caso.
 {
 	email {$ACME_EMAIL}
+	# Quem acessa por IP não envia SNI; sem isto o Caddy não sabe qual certificado usar.
+	default_sni {$DOMAIN}
 }
 
 {$DOMAIN} {
+	tls {
+		issuer acme {
+			profile {$ACME_PROFILE:classic}
+		}
+	}
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

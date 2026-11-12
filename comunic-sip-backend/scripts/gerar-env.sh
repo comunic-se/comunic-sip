@@ -13,9 +13,15 @@ cd "$(dirname "$0")/.."
 [[ -e .env ]] && { echo ".env já existe. Não vou sobrescrever segredos (apague à mão se for mesmo recomeçar)."; exit 1; }
 command -v openssl >/dev/null || { echo "Instale o openssl"; exit 1; }
 
-read -rp "Domínio do painel/API (ex.: sip.comunic.chat): " DOMAIN
+read -rp "Domínio ou IP público do painel/API (ex.: sip.comunic.chat ou 177.93.130.128): " DOMAIN
 read -rp "E-mail para o certificado HTTPS (avisos do Let's Encrypt): " ACME_EMAIL
-[[ "$DOMAIN" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || { echo "Domínio inválido: $DOMAIN"; exit 1; }
+if [[ "$DOMAIN" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+  ACME_PROFILE=shortlived   # Let's Encrypt só emite certificado de IP neste perfil (~6 dias, renovação automática)
+elif [[ "$DOMAIN" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]]; then
+  ACME_PROFILE=classic
+else
+  echo "Domínio/IP inválido: $DOMAIN"; exit 1
+fi
 [[ "$ACME_EMAIL" == *@* ]] || { echo "E-mail inválido"; exit 1; }
 
 umask 077
@@ -26,6 +32,7 @@ COMPOSE_FILE=docker-compose.yml:docker-compose.caddy.yml
 
 DOMAIN=$DOMAIN
 ACME_EMAIL=$ACME_EMAIL
+ACME_PROFILE=$ACME_PROFILE
 
 NODE_ENV=production
 HOST=0.0.0.0

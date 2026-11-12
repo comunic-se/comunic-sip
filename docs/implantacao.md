@@ -4,6 +4,19 @@ Modelo escolhido em 12/11/2026: **VM dedicada** só para o Comunic.SIP. A stack 
 
 Se um dia o Comunic.SIP for para um host que **já tem** proxy reverso (opção A), não use o Caddy. Nesse caso use só `docker-compose.yml` (mais `docker-compose.proxy.yml`, se o proxy rodar em container) e aponte o proxy para `http://127.0.0.1:8787`.
 
+## Fase atual: acesso pelo IP (sem domínio)
+Decisão de 12/11/2026: enquanto não há subdomínio, a VM atende por **`https://177.93.130.128`**.
+- **Certificado:** o Let's Encrypt emite certificado válido para IP desde janeiro/2026, mas só no perfil *shortlived* (validade de ~6 dias). O Caddy renova sozinho, desde que a VM alcance o Let's Encrypt (a porta 80 precisa ficar aberta).
+- **`.env`:** `DOMAIN=177.93.130.128` e `ACME_PROFILE=shortlived`. O `gerar-env.sh` detecta o IP e preenche os dois.
+- **Extensão:** o `manifest.json` lista `https://177.93.130.128/*` em `externally_connectable`, para o painel conversar com a extensão. Em Ajustes, a URL do backend é `https://177.93.130.128`.
+- **Menu no Comunic Chat:** `https://177.93.130.128/painel`.
+- **Ao migrar para domínio:**
+  1. Troque `DOMAIN` e `ACME_PROFILE=classic` no `.env` e rode `docker compose up -d`.
+  2. Atualize o menu do Comunic Chat e a URL na extensão.
+  3. Tire o IP do `externally_connectable`.
+
+  O banco e os segredos continuam os mesmos.
+
 ## Pré-requisitos
 - **VM:** Ubuntu 22.04/24.04 ou Debian 12, com 1 vCPU, 1 GB de RAM (2 GB é confortável) e 10 GB de disco. Precisa de IP público fixo e acesso SSH.
 - **DNS:** registro A do subdomínio (ex.: `sip.comunic.chat`) apontando para o IP da VM **antes** de subir; sem isso o Let's Encrypt não emite.
