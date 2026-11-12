@@ -51,8 +51,12 @@ Decisão de 12/11/2026: enquanto não há subdomínio, a VM atende por **`https:
 4. **Subir:** `docker compose up -d --build`.
    - As migrations rodam sozinhas (`prisma migrate deploy` no `CMD`).
    - Confira com `docker compose ps`, `docker compose logs -f api caddy` e `curl https://<domínio>/health`.
-5. **Acesso de emergência:** `docker compose exec api node scripts/admin-emergencia.mjs criar <usuario> <companyId>`. Guarde a senha e o autenticador no Vaultwarden (ver `seguranca.md`). Na primeira subida, sem empresa cadastrada, use o master da plataforma (`papel-plataforma.mjs`).
-6. **Cadastrar pelo painel** (banco limpo): PBX (Linkus SDK e Client ID/Secret da API), empresa, token do Helena, faixas e vínculos de ramal. Ver `replicacao-nova-empresa.md`. A coleta traz sozinha as chamadas dos últimos 30 dias.
+5. **Primeiro acesso (banco novo):** `docker compose exec api node scripts/primeiro-acesso.mjs`.
+   - Pede, sem mostrar o que é digitado: a URL do PBX, o AccessID/AccessKey do Linkus SDK, o Client ID/Secret da API (opcional) e o token permanente do Comunic Chat (opcional).
+   - **Testa as credenciais no PBX antes de gravar.**
+   - Cria a Comunic.se com a faixa 4000–4099.
+6. **Acesso de emergência:** `docker compose exec api node scripts/admin-emergencia.mjs criar <usuario> f0c2a7d8-9e22-42f5-8c39-19ff41688409`. Guarde a senha e o autenticador no Vaultwarden (ver `seguranca.md`).
+6b. **Pelo painel** (`https://<domínio>/painel`, login de emergência): confira o PBX em Empresas e use **Sincronizar** para trazer as chamadas dos últimos 30 dias. Depois vincule os ramais aos usuários. Outras empresas: ver `replicacao-nova-empresa.md`.
 7. **Menu no Comunic Chat:** cadastrar o menu personalizado "Página interna" apontando para `https://<domínio>/painel` (ver `painel-gestao-rbac.md`). Nenhum proxy pode adicionar `X-Frame-Options` nessa rota; o Caddyfile do repositório não adiciona.
 8. **Backup no cron** do usuário (`crontab -e`):
    ```
