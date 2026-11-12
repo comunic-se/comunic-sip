@@ -17,7 +17,7 @@
 | Item | Onde vive | Validade |
 |---|---|---|
 | Sessão Helena captada | `chrome.storage.session` (memória do navegador) | a da sessão do Comunic Chat |
-| JWT do backend | `chrome.storage.session` / memória do painel | 12 h |
+| JWT do backend | `chrome.storage.session` / memória do painel | 12 h, mas **revalidado no banco a cada pedido**: papel de plataforma removido, empresa desativada ou conta de emergência desativada derrubam a sessão na hora; permissões são sempre lidas do banco |
 | Token OpenAPI Yeastar | cache em memória no backend | 30 min, renovado com `refresh_token` (24 h). Limite de 8 tokens por app — por isso o cache |
 | Assinatura do SDK | `chrome.storage.local` | `SIGN_TTL_SECONDS` (padrão 12 h). A extensão renova 15 min antes de vencer; se houver chamada em andamento, troca só ao fim dela |
 

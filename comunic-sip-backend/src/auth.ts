@@ -62,9 +62,29 @@ export function requireAuth(perm?: Permission) {
       return reply.code(401).send({ error: 'não autenticado' });
     }
     const u = req.user as PanelToken;
+    // O JWT vale 12 h, mas o que ele afirma é revalidado no banco a cada pedido:
+    // papel removido, empresa desativada ou conta de emergência desativada
+    // derrubam a sessão na hora (sem esperar o token expirar).
+    const stale = await sessionRevoked(u);
+    if (stale) return reply.code(401).send({ error: stale });
     // Papel + concessões explícitas (consultadas no banco a cada pedido).
     if (perm && !(await effectiveScope(u, perm))) {
       return reply.code(403).send({ error: 'você não tem permissão para esta ação' });
     }
   };
+}
+
+/** Devolve o motivo se a sessão não vale mais (null = ok). */
+async function sessionRevoked(u: PanelToken): Promise<string | null> {
+  if (u.emergency) {
+    const username = u.userId.replace(/^emergency:/, '');
+    const acc = await prisma.emergencyAdmin.findUnique({ where: { username } });
+    return !acc || acc.disabled ? 'conta de emergência desativada' : null;
+  }
+  if (u.role === 'SUPER_ADMIN' || u.role === 'PARTNER_ADMIN') {
+    const pr = await prisma.platformRole.findFirst({ where: { helenaUserId: u.userId, role: u.role } });
+    if (!pr) return 'seu papel mudou; entre de novo';
+  }
+  const company = await prisma.company.findUnique({ where: { id: u.companyId }, select: { active: true } });
+  return company?.active ? null : 'empresa não habilitada no Comunic.SIP';
 }
