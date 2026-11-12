@@ -23,6 +23,16 @@ Modelo escolhido: **opção A** — o host já tem um proxy reverso (que atende 
 7. **Menu no Comunic Chat:** cadastrar o menu personalizado "Página interna" apontando para `https://sip.comunic.chat/painel` (ver `painel-gestao-rbac.md`). O proxy **não** pode adicionar `X-Frame-Options: DENY/SAMEORIGIN` nessa rota, senão o iframe não abre.
 8. **Extensão:** em Ajustes → Login integrado, usar `https://sip.comunic.chat`. Para distribuição, publicar na Chrome Web Store/Edge Add-ons e adicionar o domínio de produção em `externally_connectable` e `optional_host_permissions`.
 
+## Extensão em produção: sem tela de Ajustes (fazer junto com o deploy)
+Decisão de 12/11/2026: em produção a extensão já sai **conectada ao backend**, sem configuração pelo usuário. A tela de Ajustes (URL do backend, "Ativar login integrado" e campos manuais de PBX/ramal/assinatura) **sai** do build de produção. Passos:
+
+1. **URL do backend no build:** `npm run build` lê a URL de uma variável (ex.: `BACKEND_URL=https://sip.comunic.chat npm run build`) e o esbuild injeta no código. Sem a variável, o build de dev usa `http://localhost:8787`.
+2. **Manifest de produção:** o domínio do backend entra em `host_permissions` (fixo) em vez de `optional_host_permissions: ["https://*/*"]`; some o pedido de permissão em tempo de execução. `externally_connectable` fica só com o domínio do painel.
+3. **Remover a tela de Ajustes** e os campos manuais do SDK (`pbxURL`, `extension`, `signature` digitados). Tudo vem do backend pelo login integrado. O botão de engrenagem sai (ou vira só "Sobre/versão").
+4. **ID fixo da extensão:** publicar na Chrome Web Store / Edge Add-ons e atualizar o `EXT_ID` padrão em `public/painel.html` (deixa de precisar de `?ext=`).
+5. **Whitelabel:** um build por parceiro com o domínio dele (`BACKEND_URL`, nome e ícones no manifest).
+6. **Testar:** instalar o pacote de produção num perfil limpo do Chrome, abrir o Comunic Chat e confirmar que o ramal registra sem nenhum clique.
+
 ## Pendências antes do primeiro deploy
 - [x] `Dockerfile` com Prisma, `public/` e `scripts/`, usuário sem privilégio e healthcheck.
 - [x] `docker-compose.yml` da opção A (sem Caddy, Postgres sem porta, API só no loopback, limites de memória).
