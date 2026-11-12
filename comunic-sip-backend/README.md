@@ -126,9 +126,12 @@ npx prisma generate                                  # atualiza o client
 
 | Arquivo | Para quê |
 |---|---|
-| `docker-compose.yml` | **Produção (opção A):** `api` + `db`. API só em `127.0.0.1:8787`, Postgres sem porta publicada, `mem_limit` de 512 MB em cada, `DB_PASSWORD` obrigatória. Sem Caddy: o TLS fica no proxy que já existe no host |
-| `docker-compose.proxy.yml` | Complemento quando o proxy roda em container: liga a API à rede do proxy (`PROXY_NETWORK`) |
+| `docker-compose.yml` | **Produção (base):** `api` + `db`. API só em `127.0.0.1:8787`, Postgres sem porta publicada, `mem_limit` de 512 MB em cada, `DB_PASSWORD` obrigatória |
+| `docker-compose.caddy.yml` | **VM dedicada:** Caddy em 80/443 com HTTPS automático (Let's Encrypt) para `DOMAIN`; config em `deploy/Caddyfile`. O `.env` gerado por `scripts/gerar-env.sh` já o inclui via `COMPOSE_FILE` |
+| `docker-compose.proxy.yml` | Host com proxy próprio em container (no lugar do Caddy): liga a API à rede do proxy (`PROXY_NETWORK`) |
 | `docker-compose.dev.yml` | **Desenvolvimento:** só o Postgres, em `127.0.0.1:5433` (mesmo volume de dados) |
 | `Dockerfile` | Build em duas etapas; gera o client do Prisma, inclui `public/` (painel) e `scripts/`, roda como usuário `node`, healthcheck em `/health`. **Aplica as migrations pendentes ao subir** (`prisma migrate deploy`) |
+
+Scripts de servidor: `scripts/preparar-vm.sh` (prepara a VM: Docker, firewall, fail2ban) e `scripts/gerar-env.sh` (gera o `.env` de produção com segredos novos).
 
 O `prisma` (CLI) está em `dependencies` porque o container precisa dele para aplicar as migrations. Passo a passo de produção: [`../docs/implantacao.md`](../docs/implantacao.md).

@@ -1,0 +1,18 @@
+# Comunic.SIP — proxy HTTPS da VM dedicada (usado por docker-compose.caddy.yml).
+# Os cabeçalhos de segurança (CSP, frame-ancestors, nosniff...) vêm da própria API.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	reverse_proxy api:8787
+	log {
+		output stdout
+		format console
+	}
+}

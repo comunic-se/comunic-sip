@@ -1,0 +1,30 @@
+# Complemento para VM DEDICADA (sem proxy reverso no host): o Caddy atende 80/443,
+# emite e renova o certificado HTTPS (Let's Encrypt) e encaminha tudo para a API.
+#
+# O scripts/gerar-env.sh grava COMPOSE_FILE no .env, então basta:
+#   docker compose up -d --build
+#
+# Requisitos: DNS de DOMAIN apontando para o IP da VM e portas 80/443 liberadas.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN no .env}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL no .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    mem_limit: 128m
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
