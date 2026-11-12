@@ -89,8 +89,8 @@ Regras de segurança:
 |---|---|---|
 | Ramais (ver: `view_extensions`; vincular/desvincular: `manage_extensions`) | `view_extensions` / `manage_extensions` | **pronto** — sem `manage_extensions` a tela fica "Somente visualização" |
 | Acessos (interruptor por pessoa e permissão) | `manage_access` | **pronto** |
-| Dashboard | `view_dashboard` | em breve (depende do CDR) |
-| Chamadas | `view_cdr` | em breve (CDR via webhook 30012) |
+| Dashboard (indicadores, por dia/hora, por atendente) | `view_dashboard` | **pronto** — períodos Hoje / 7 / 30 dias |
+| Chamadas (lista com filtros; exportar CSV com `export_cdr`) | `view_cdr` / `export_cdr` | **pronto** |
 | Gravações | `play_recording` | em breve |
 | Empresas (cadastro, PBX, faixas, token, ativar/desativar) | `provision_company` / `manage_pbx` | **pronto** — só aparece para SUPER/PARTNER; aba PBX só para SUPER |
 

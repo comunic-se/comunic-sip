@@ -114,6 +114,19 @@ Não existe remoção (regra de negócio; a API do Helena também não oferece).
 |---|---|---|
 | GET | `/v1/directory` | Ramais da **própria empresa** do usuário: `{ items: [{ extension, name, me }] }`, em ordem alfabética. Fonte: vínculos atendente → ramal do Comunic.SIP; nomes vindos do Helena (token permanente, cache de 5 min). Sem token do Helena, devolve "Ramal NNNN" como nome. Usado na transferência da extensão |
 
+## Chamadas e Dashboard (JWT)
+
+Dados coletados do PBX pela OpenAPI (ver `integracoes-helena-yeastar.md`). Filtro por escopo: **self** = só as próprias (dono ou outra ponta de chamada interna) · **department** = atendentes dos meus setores · **company** = a empresa · **all** = master (pode pedir `companyId=*` para incluir chamadas sem empresa identificada).
+
+| Método | Rota | Permissão | Descrição |
+|---|---|---|---|
+| GET | `/v1/panel/calls` | `view_cdr` | Lista paginada. Filtros: `from`, `to` (YYYY-MM-DD, fuso do PBX), `type` (`Inbound`/`Outbound`/`Internal`), `status` (`answered`/`missed`), `q` (número ou nome), `userId`, `page`, `pageSize` (≤100) |
+| GET | `/v1/panel/calls/export` | `export_cdr` (+ escopo de `view_cdr`) | CSV com `;` e BOM (abre direto no Excel), até 50 mil linhas. Grava `cdr_export` no `audit_log` |
+| GET | `/v1/panel/dashboard` | `view_dashboard` | `kpis` (recebidas, atendidas, perdidas, taxa de atendimento, efetuadas, internas, conversa média/total, espera média), `byDay`, `byHour`, `byUser`, `syncedAt`, `apiConfigured` |
+| POST | `/v1/panel/pbx/:id/sync` | `manage_pbx` | Força a coleta agora. Auditado |
+
+O cadastro do PBX (`POST/PATCH /v1/panel/pbx`) aceita `apiClientId` + `apiClientSecret` (Integrations → API), testados antes de salvar e cifrados; o `GET` informa só `apiConfigured`, `cdrSyncedAt` e `cdrSyncError`.
+
 ## Painel — sessão e acessos (JWT)
 
 | Método | Rota | Permissão | Descrição |

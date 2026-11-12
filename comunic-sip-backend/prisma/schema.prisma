@@ -20,6 +20,9 @@ model Pbx {
   sdkAccessKeyEnc String    @map("sdk_access_key_enc")
   sn              String?
   createdAt       DateTime  @default(now()) @map("created_at")
+  // Coleta de CDR pela OpenAPI (Client ID/Secret ficam em client_id_enc/client_secret_enc)
+  cdrSyncedAt     DateTime? @map("cdr_synced_at")
+  cdrSyncError    String?   @map("cdr_sync_error")
   companies       Company[]
 
   @@map("pbx")
@@ -89,9 +92,16 @@ model Call {
   direction       String?
   status          String?
   fromNumber      String?   @map("from_number")
+  fromName        String?   @map("from_name")
   toNumber        String?   @map("to_number")
+  toName          String?   @map("to_name")
+  // Ramal "dono" da chamada (quem fez na saída, quem recebeu na entrada) e o atendente vinculado na hora
   extensionNumber String?   @map("extension_number")
   helenaUserId    String?   @map("helena_user_id")
+  // Chamada interna: o outro ramal e o outro atendente (para os dois verem no próprio histórico)
+  otherExtension  String?   @map("other_extension")
+  otherUserId     String?   @map("other_user_id")
+  ringDuration    Int?      @map("ring_duration")
   departmentIds   String[]  @map("department_ids")
   contactId       String?   @map("contact_id")
   callDuration    Int?      @map("call_duration")
@@ -101,8 +111,10 @@ model Call {
   did             String?
   raw             Json?
 
+  @@unique([pbxId, uid])
   @@index([companyId, startedAt])
   @@index([companyId, helenaUserId])
+  @@index([otherUserId])
   @@map("calls")
 }
 

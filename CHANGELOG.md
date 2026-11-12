@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Chamadas e Dashboard no painel:** coleta periódica do CDR pela OpenAPI do Yeastar (Client ID/Secret no cadastro do PBX, cifrados), associação de cada chamada à empresa (faixa ou DID) e ao atendente; lista com filtros, exportação CSV auditada, indicadores, gráficos por dia/hora e ranking por atendente, tudo respeitando o escopo de cada pessoa. Migration `20261112150000_cdr_sync`.
 - **Granulação total de acessos:** interruptor por pessoa e permissão para todos os usuários (inclusive retirar o que o papel daria), "Conceder acessos" ajustável só pelo master, master intocável, migration `20261112140000_permission_deny`.
 - **Mínimo privilégio no painel:** Super Administrador do Comunic Chat altera; Administrador só visualiza; Atendente vê só o próprio. Novo papel `COMPANY_VIEWER`, permissões `view_extensions` e `manage_access`, módulo **Acessos** para conceder/revogar permissões extras (sem autoelevação, valendo na hora, auditado) e `GET /v1/panel/me` com as permissões efetivas. Script `papel-plataforma.mjs`; o seed não concede mais SUPER_ADMIN.
 - **Status do ramal no painel:** Conectado / Desconectado / Desvinculado, com base no sinal de presença da extensão (`POST /v1/presence`, a cada minuto); a coluna atualiza sozinha a cada 30 s.

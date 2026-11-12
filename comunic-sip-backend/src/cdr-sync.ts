@@ -1,0 +1,156 @@
+// Coleta de CDR (histórico de chamadas) pela OpenAPI do Yeastar.
+// A cada CDR_SYNC_INTERVAL_S, para cada PBX com Client ID/Secret da API:
+//   lê v1.0/cdr/list do mais novo para o mais antigo até encontrar o que já existe
+//   (ou chegar a CDR_BACKFILL_DAYS na primeira vez) e grava em `calls`.
+// Cada chamada é associada à EMPRESA (faixa de ramais do PBX, ou DID em did_route) e ao
+// ATENDENTE vinculado ao ramal naquele momento. Idempotente por (pbx_id, uid).
+import type { FastifyBaseLogger } from 'fastify';
+import { prisma } from './db.js';
+import { decryptSecret } from './crypto.js';
+import { openapiGet, type PbxCreds } from './yeastar.js';
+
+const INTERVAL_S = Math.max(30, Number(process.env.CDR_SYNC_INTERVAL_S ?? 120) || 120);
+const BACKFILL_DAYS = Math.max(1, Number(process.env.CDR_BACKFILL_DAYS ?? 30) || 30);
+// Fuso do relógio do PBX, usado só quando o CDR não traz timestamp (ex.: -03:00)
+const PBX_TZ = process.env.PBX_TIMEZONE_OFFSET ?? '-03:00';
+const PAGE_SIZE = 100;
+const MAX_PAGES = 200; // trava de segurança (20 mil chamadas por rodada)
+
+const running = new Set<string>();
+
+/** Converte o horário do CDR em Date. Prefere timestamp (epoch s); senão interpreta o texto no fuso do PBX. */
+export function parseCdrTime(item: any): Date | null {
+  const ts = Number(item?.timestamp);
+  if (Number.isFinite(ts) && ts > 1e9) return new Date(ts * 1000);
+  const t = String(item?.time ?? '').trim();
+  const m = t.match(/^(\d{1,4})[/-](\d{1,2})[/-](\d{1,4})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) { const d = new Date(t); return isNaN(+d) ? null : d; }
+  let [, a, b, c, hh, mi, ss] = m;
+  let y: string, mo: string, d: string;
+  if (a.length === 4) { y = a; mo = b; d = c; }              // YYYY/MM/DD
+  else if (Number(a) > 12) { d = a; mo = b; y = c; }          // DD/MM/YYYY
+  else { mo = a; d = b; y = c; }                              // MM/DD/YYYY (padrão do Yeastar)
+  const iso = `${y.padStart(4, '20')}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T${hh.padStart(2, '0')}:${mi}:${ss ?? '00'}${PBX_TZ}`;
+  const dt = new Date(iso);
+  return isNaN(+dt) ? null : dt;
+}
+
+interface CompanyMap {
+  ranges: { companyId: string; from: string; to: string }[];
+  links: Map<string, string>; // `${companyId}|${ext}` -> helenaUserId
+  dids: Map<string, string>;  // did -> companyId
+}
+
+async function loadMap(pbxId: string): Promise<CompanyMap> {
+  const companies = await prisma.company.findMany({ where: { pbxId }, include: { ranges: true, links: true } });
+  const dids = await prisma.didRoute.findMany({ where: { pbxId } });
+  const ranges: CompanyMap['ranges'] = [];
+  const links = new Map<string, string>();
+  for (const c of companies) {
+    for (const r of c.ranges) ranges.push({ companyId: c.id, from: r.fromExt, to: r.toExt });
+    for (const l of c.links) links.set(`${c.id}|${l.extensionNumber}`, l.helenaUserId);
+  }
+  return { ranges, links, dids: new Map(dids.map((d) => [d.didNumber, d.companyId])) };
+}
+
+function companyOfExt(map: CompanyMap, num?: string | null): string | null {
+  const n = String(num ?? '').trim();
+  if (!/^\d{2,6}$/.test(n)) return null;
+  const r = map.ranges.find((x) => x.from.length === n.length && n >= x.from && n <= x.to);
+  return r ? r.companyId : null;
+}
+
+/** Traduz um item do CDR para a linha de `calls`, com empresa e atendente. */
+export function mapCdr(pbxId: string, item: any, map: CompanyMap) {
+  const type = String(item.call_type ?? '').trim();          // Inbound | Outbound | Internal
+  const from = String(item.call_from_number ?? item.call_from ?? '').trim() || null;
+  const to = String(item.call_to_number ?? item.call_to ?? '').trim() || null;
+  const fromCo = companyOfExt(map, from), toCo = companyOfExt(map, to);
+
+  let owner: string | null = null, other: string | null = null;
+  if (type === 'Inbound') owner = toCo ? to : null;
+  else if (type === 'Outbound') owner = fromCo ? from : null;
+  else { owner = fromCo ? from : toCo ? to : null; other = owner === from && toCo ? to : owner === to && fromCo ? from : null; }
+  if (!owner) owner = fromCo ? from : toCo ? to : null;
+
+  const did = String(item.did_number ?? '').trim() || null;
+  const companyId = companyOfExt(map, owner) ?? companyOfExt(map, other) ?? (did ? map.dids.get(did) ?? null : null);
+  const userOf = (ext: string | null) => (ext ? map.links.get(`${companyOfExt(map, ext)}|${ext}`) ?? null : null);
+  const clean = (s: unknown) => { const v = String(s ?? '').trim(); return v || null; };
+
+  return {
+    pbxId,
+    uid: String(item.uid ?? item.id),
+    callId: clean(item.call_id),
+    startedAt: parseCdrTime(item),
+    direction: type || null,
+    status: clean(item.disposition),                          // ANSWERED | NO ANSWER | BUSY | FAILED | VOICEMAIL
+    fromNumber: from, fromName: clean(item.call_from_name),
+    toNumber: to, toName: clean(item.call_to_name),
+    extensionNumber: owner, helenaUserId: userOf(owner),
+    otherExtension: other, otherUserId: userOf(other),
+    companyId,
+    callDuration: Number.isFinite(Number(item.duration)) ? Number(item.duration) : null,
+    ringDuration: Number.isFinite(Number(item.ring_duration)) ? Number(item.ring_duration) : null,
+    talkDuration: Number.isFinite(Number(item.talk_duration)) ? Number(item.talk_duration) : null,
+    trunk: clean(item.src_trunk) ?? clean(item.dst_trunk),
+    did,
+    recordingFile: clean(item.record_file ?? item.recording),
+    raw: item,
+  };
+}
+
+export async function syncPbx(pbxId: string, log: FastifyBaseLogger): Promise<number> {
+  if (running.has(pbxId)) return 0;
+  running.add(pbxId);
+  let inserted = 0;
+  try {
+    const pbx = await prisma.pbx.findUnique({ where: { id: pbxId } });
+    if (!pbx?.clientIdEnc || !pbx.clientSecretEnc) return 0;
+    const creds: PbxCreds = { baseUrl: pbx.baseUrl, accessId: decryptSecret(pbx.clientIdEnc), accessKey: decryptSecret(pbx.clientSecretEnc) };
+    const map = await loadMap(pbxId);
+    const cutoff = Date.now() - BACKFILL_DAYS * 86_400_000;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const res = await openapiGet(creds, 'v1.0/cdr/list', { page, page_size: PAGE_SIZE, sort_by: 'id', order_by: 'desc' });
+      const items: any[] = Array.isArray(res.data) ? res.data : [];
+      if (!items.length) break;
+      const rows = items.map((it) => mapCdr(pbxId, it, map)).filter((r) => r.uid && r.uid !== 'undefined');
+      const known = new Set(
+        (await prisma.call.findMany({ where: { pbxId, uid: { in: rows.map((r) => r.uid) } }, select: { uid: true } })).map((c) => c.uid),
+      );
+      const fresh = rows.filter((r) => !known.has(r.uid) && (!r.startedAt || +r.startedAt >= cutoff));
+      if (fresh.length) {
+        const out = await prisma.call.createMany({ data: fresh, skipDuplicates: true });
+        inserted += out.count;
+      }
+      const reachedKnown = known.size > 0;
+      const reachedCutoff = rows.some((r) => r.startedAt && +r.startedAt < cutoff);
+      if (reachedKnown || reachedCutoff || items.length < PAGE_SIZE) break;
+    }
+    await prisma.pbx.update({ where: { id: pbxId }, data: { cdrSyncedAt: new Date(), cdrSyncError: null } });
+    if (inserted) log.info({ pbxId, inserted }, 'CDR sincronizado');
+  } catch (e: any) {
+    const msg = String(e?.message ?? e).slice(0, 500);
+    log.warn({ pbxId, err: msg }, 'falha na coleta de CDR');
+    await prisma.pbx.update({ where: { id: pbxId }, data: { cdrSyncError: msg } }).catch(() => {});
+  } finally {
+    running.delete(pbxId);
+  }
+  return inserted;
+}
+
+async function syncAll(log: FastifyBaseLogger): Promise<void> {
+  const pbxs = await prisma.pbx.findMany({ where: { clientIdEnc: { not: null }, clientSecretEnc: { not: null } }, select: { id: true } });
+  for (const p of pbxs) await syncPbx(p.id, log);
+}
+
+export function startCdrSync(log: FastifyBaseLogger): void {
+  if ((process.env.CDR_SYNC_ENABLED ?? 'true').toLowerCase() === 'false') {
+    log.info('coleta de CDR desligada (CDR_SYNC_ENABLED=false)');
+    return;
+  }
+  log.info(`coleta de CDR a cada ${INTERVAL_S}s (histórico inicial de ${BACKFILL_DAYS} dias)`);
+  setTimeout(() => syncAll(log).catch(() => {}), 10_000);
+  setInterval(() => syncAll(log).catch(() => {}), INTERVAL_S * 1000).unref();
+}

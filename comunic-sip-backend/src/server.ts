@@ -11,6 +11,8 @@ import { registerCompanyRoutes } from './routes-companies.js';
 import { registerDirectoryRoutes } from './routes-directory.js';
 import { registerEmergencyRoutes } from './routes-emergency.js';
 import { registerAccessRoutes } from './routes-access.js';
+import { startCdrSync } from './cdr-sync.js';
+import { registerCallRoutes } from './routes-calls.js';
 
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
@@ -23,6 +25,7 @@ await registerCompanyRoutes(app);
 await registerDirectoryRoutes(app);
 await registerEmergencyRoutes(app);
 await registerAccessRoutes(app);
+await registerCallRoutes(app);
 
 app.get('/health', async () => ({ ok: true }));
 
@@ -100,5 +103,5 @@ app.get('/v1/me', { preHandler: requireAuth() }, async (req) => ({ user: req.use
 
 assertConfig();
 app.listen({ port: config.port, host: config.host })
-  .then(() => app.log.info(`Comunic.SIP backend em http://${config.host}:${config.port}`))
+  .then(() => { app.log.info(`Comunic.SIP backend em http://${config.host}:${config.port}`); startCdrSync(app.log); })
   .catch((err) => { app.log.error(err); process.exit(1); });

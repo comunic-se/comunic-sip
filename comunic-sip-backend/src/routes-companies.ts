@@ -76,6 +76,17 @@ function normalizeBaseUrl(v: unknown): string | null {
   }
 }
 
+/** Valida e cifra Client ID/Secret da OpenAPI (Integrations > API). null = não informado. */
+async function apiCreds(baseUrl: string, b: Record<string, unknown>): Promise<{ clientIdEnc: string; clientSecretEnc: string } | null | string> {
+  const id = str(b.apiClientId), secret = str(b.apiClientSecret);
+  if (!id && !secret) return null;
+  if (!id || !secret) return 'informe Client ID e Client Secret da API juntos';
+  if (!(await checkPbx({ baseUrl, accessId: id, accessKey: secret }))) {
+    return 'não consegui autenticar na API do PBX com esse Client ID/Secret (confira Integrations > API, acesso remoto pela FQDN e restrição de IP)';
+  }
+  return { clientIdEnc: encryptSecret(id), clientSecretEnc: encryptSecret(secret) };
+}
+
 export async function registerCompanyRoutes(app: FastifyInstance): Promise<void> {
   // ---------------- PBX (só SUPER_ADMIN) ----------------
   app.get('/v1/panel/pbx', { preHandler: requireAuth('provision_company') }, async (req) => {
@@ -92,6 +103,10 @@ export async function registerCompanyRoutes(app: FastifyInstance): Promise<void>
       baseUrl: p.baseUrl,
       sdkAccessId: user.role === 'SUPER_ADMIN' ? p.sdkAccessId : undefined,
       companies: p._count.companies,
+      // OpenAPI (CDR/gravações): só informa se está configurada, nunca devolve as chaves
+      apiConfigured: Boolean(p.clientIdEnc && p.clientSecretEnc),
+      cdrSyncedAt: p.cdrSyncedAt,
+      cdrSyncError: user.role === 'SUPER_ADMIN' ? p.cdrSyncError : undefined,
     }));
   });
 
@@ -106,10 +121,12 @@ export async function registerCompanyRoutes(app: FastifyInstance): Promise<void>
     if (!(await checkPbx({ baseUrl, accessId, accessKey }))) {
       return bad(reply, 'não consegui autenticar no PBX com essas credenciais (confira URL, AccessID/AccessKey, Linkus SDK ativo e IP Restriction)');
     }
+    const api = await apiCreds(baseUrl, b);
+    if (typeof api === 'string') return bad(reply, api);
     const pbx = await prisma.pbx.create({
-      data: { name, baseUrl, sdkAccessId: accessId, sdkAccessKeyEnc: encryptSecret(accessKey) },
+      data: { name, baseUrl, sdkAccessId: accessId, sdkAccessKeyEnc: encryptSecret(accessKey), ...(api ?? {}) },
     });
-    await audit(null, user.userId, 'pbx_create', { pbxId: pbx.id, name, baseUrl });
+    await audit(null, user.userId, 'pbx_create', { pbxId: pbx.id, name, baseUrl, api: Boolean(api) });
     return { ok: true, id: pbx.id };
   });
 
@@ -119,7 +136,7 @@ export async function registerCompanyRoutes(app: FastifyInstance): Promise<void>
     const cur = await prisma.pbx.findUnique({ where: { id } });
     if (!cur) return reply.code(404).send({ error: 'PBX não encontrado' });
     const b = (req.body ?? {}) as Record<string, unknown>;
-    const data: Record<string, string> = {};
+    const data: Record<string, string | null> = {};
     if (b.name !== undefined) { if (!str(b.name)) return bad(reply, 'nome vazio'); data.name = str(b.name); }
     if (b.baseUrl !== undefined) { const u = normalizeBaseUrl(b.baseUrl); if (!u) return bad(reply, 'URL do PBX inválida'); data.baseUrl = u; }
     if (b.sdkAccessId !== undefined) { if (!str(b.sdkAccessId)) return bad(reply, 'AccessID vazio'); data.sdkAccessId = str(b.sdkAccessId); }
@@ -131,8 +148,14 @@ export async function registerCompanyRoutes(app: FastifyInstance): Promise<void>
       if (!ok) return bad(reply, 'não consegui autenticar no PBX com essas credenciais');
       data.sdkAccessKeyEnc = encryptSecret(newKey);
     }
+    const api = await apiCreds(data.baseUrl ?? cur.baseUrl, b);
+    if (typeof api === 'string') return bad(reply, api);
+    if (api) Object.assign(data, api, { cdrSyncError: null });
     await prisma.pbx.update({ where: { id }, data });
-    await audit(null, user.userId, 'pbx_update', { pbxId: id, fields: Object.keys(data).filter((k) => k !== 'sdkAccessKeyEnc'), keyChanged: Boolean(newKey) });
+    await audit(null, user.userId, 'pbx_update', {
+      pbxId: id, fields: Object.keys(data).filter((k) => !k.endsWith('Enc') && k !== 'cdrSyncError'),
+      keyChanged: Boolean(newKey), apiChanged: Boolean(api),
+    });
     return { ok: true };
   });
 

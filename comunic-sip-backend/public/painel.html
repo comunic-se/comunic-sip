@@ -121,6 +121,26 @@
   .range-add input{width:90px}
   .emg-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--amber-soft);color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:8px 14px;font-size:13px;margin-bottom:16px}
   .emg-banner b{font-weight:700}
+  /* DASHBOARD / CHAMADAS */
+  .kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .l{font-size:11.5px;color:var(--muted);font-weight:600}
+  .kpi .v{font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chart-card{padding:14px}
+  .chart-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .chart svg{display:block;width:100%;height:200px}
+  .chart .grid{stroke:var(--line);stroke-width:1}
+  .chart .axis{fill:var(--faint);font-size:10px}
+  .chart .bar{fill:var(--blue)} .chart .hit{fill:transparent;cursor:default} .chart g:hover .bar{fill:var(--blue-dark)}
+  .chart-tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;border-radius:8px;padding:7px 10px;line-height:1.45;box-shadow:0 6px 16px rgba(15,23,42,.2)}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .filters .fdate{width:150px;height:38px;border-radius:999px} .filters .fsel{width:170px;height:38px;border-radius:999px}
+  .dir{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--body)} .dir svg{width:15px;height:15px;color:var(--muted)}
+  .pager{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .empty-cdr{padding:40px 20px;text-align:center;color:var(--muted)}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
   /* hidden sempre vence (display:flex anularia o atributo) */
   [hidden]{display:none!important}
   .role-tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:var(--line);color:var(--muted)}
@@ -193,14 +213,42 @@
 
         <!-- DASHBOARD -->
         <section class="view" data-view="dashboard" hidden>
-          <div class="page-head"><div><h1 class="page-title">Dashboard</h1><div class="page-sub">Métricas de chamadas</div></div></div>
-          <div class="card"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg><div class="t">Em breve</div><div>Disponível quando a ingestão de CDR estiver ativa.</div></div></div>
+          <div class="page-head"><div><h1 class="page-title">Dashboard</h1><div class="page-sub" id="db-sub">Métricas de chamadas</div></div></div>
+          <div class="toolbar">
+            <div class="tabs" id="db-range"><button class="tab" data-r="0">Hoje</button><button class="tab active" data-r="7">7 dias</button><button class="tab" data-r="30">30 dias</button></div>
+            <div class="spacer"></div><span class="muted" id="db-sync" style="font-size:12.5px"></span>
+          </div>
+          <div id="db-body">
+            <div class="kpis" id="db-kpis"></div>
+            <div class="grid2">
+              <div class="card chart-card"><div class="chart-title">Chamadas por dia</div><div class="chart" id="db-day"></div></div>
+              <div class="card chart-card"><div class="chart-title">Chamadas por hora do dia</div><div class="chart" id="db-hour"></div></div>
+            </div>
+            <div class="card" style="margin-top:16px">
+              <div class="chart-title" style="padding:14px 14px 0">Por atendente</div>
+              <table><thead><tr><th>Atendente</th><th class="num">Total</th><th class="num">Atendidas</th><th class="num">Perdidas</th><th class="num">Tempo em conversa</th></tr></thead><tbody id="db-users"></tbody></table>
+            </div>
+          </div>
+          <div class="appmsg err" id="db-msg"></div>
+          <div class="chart-tip" id="chart-tip" hidden></div>
         </section>
 
         <!-- CHAMADAS -->
         <section class="view" data-view="chamadas" hidden>
-          <div class="page-head"><div><h1 class="page-title">Chamadas</h1><div class="page-sub">Histórico de chamadas (CDR)</div></div></div>
-          <div class="card"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div class="t">Em breve</div><div>A lista de chamadas aparece aqui quando a ingestão de CDR estiver ativa.</div></div></div>
+          <div class="page-head"><div><h1 class="page-title">Chamadas</h1><div class="page-sub" id="ch-sub">Histórico de chamadas</div></div>
+            <button class="btn ghost" id="ch-export" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Exportar CSV</button></div>
+          <div class="toolbar filters">
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="ch-q" placeholder="Número ou nome…" autocomplete="off" /></div>
+            <input type="date" class="field fdate" id="ch-from"><span class="muted">até</span><input type="date" class="field fdate" id="ch-to">
+            <select class="field fsel" id="ch-type"><option value="">Todos os tipos</option><option value="Inbound">Recebidas</option><option value="Outbound">Efetuadas</option><option value="Internal">Internas</option></select>
+            <select class="field fsel" id="ch-status"><option value="">Todos os status</option><option value="answered">Atendidas</option><option value="missed">Não atendidas</option></select>
+          </div>
+          <div class="card">
+            <table><thead><tr><th>Data/hora</th><th>Tipo</th><th>De</th><th>Para</th><th>Atendente</th><th>Status</th><th class="num">Conversa</th></tr></thead>
+            <tbody id="ch-rows"></tbody></table>
+          </div>
+          <div class="pager"><span class="muted" id="ch-count"></span><div class="spacer"></div><button class="act" id="ch-prev">Anterior</button><button class="act" id="ch-next">Próxima</button></div>
+          <div class="appmsg err" id="ch-msg"></div>
         </section>
 
         <!-- GRAVAÇÕES -->
@@ -229,7 +277,7 @@
           </div>
           <div id="emp-pane-pbx" hidden>
             <div class="card">
-              <table><thead><tr><th>PBX</th><th>URL</th><th>AccessID</th><th>Empresas</th><th style="text-align:right">Ações</th></tr></thead>
+              <table><thead><tr><th>PBX</th><th>URL</th><th>AccessID</th><th>Empresas</th><th>Coleta de chamadas</th><th style="text-align:right">Ações</th></tr></thead>
               <tbody id="pbx-rows"></tbody></table>
             </div>
           </div>
@@ -272,6 +320,11 @@
               <div><label class="lbl" for="dp-aid">AccessID *</label><input class="field" id="dp-aid" autocomplete="off"></div>
               <div><label class="lbl" for="dp-akey">AccessKey *</label><input class="field" id="dp-akey" type="password" autocomplete="new-password"></div>
             </div>
+            <div class="row2">
+              <div><label class="lbl" for="dp-cid">API · Client ID</label><input class="field" id="dp-cid" autocomplete="off" placeholder="opcional"></div>
+              <div><label class="lbl" for="dp-csec">API · Client Secret</label><input class="field" id="dp-csec" type="password" autocomplete="new-password" placeholder="opcional"></div>
+            </div>
+            <div class="hint">Integrations → API no portal do PBX. Necessário para Chamadas, Dashboard e Gravações. Testado antes de salvar e guardado cifrado.</div>
             <div class="hint" id="dp-hint">Linkus SDK → Integrações no portal do PBX. As credenciais são testadas antes de salvar; a chave fica cifrada.</div>
             <div class="err" id="dp-msg"></div>
           </div>
@@ -372,6 +425,8 @@ function switchView(name){
   if(name==='ramais') loadRamais();
   if(name==='empresas') loadEmpresas();
   if(name==='acessos') loadAcessos();
+  if(name==='dashboard') loadDashboard();
+  if(name==='chamadas') loadChamadas();
 }
 document.querySelectorAll('.nav-item').forEach(it=>it.addEventListener('click',()=>switchView(it.dataset.view)));
 
@@ -504,13 +559,20 @@ function confirmInline(tr,msg){
 }
 function renderPbx(){
   const rows=$('#pbx-rows');
-  if(!PBXS.length){rows.innerHTML=empty(5,'Nenhum PBX cadastrado.');return;}
+  if(!PBXS.length){rows.innerHTML=empty(6,'Nenhum PBX cadastrado.');return;}
   rows.innerHTML='';
   for(const p of PBXS){
     const tr=document.createElement('tr');
-    tr.innerHTML='<td class="u-name">'+esc(p.name)+'</td><td class="muted">'+esc(p.baseUrl)+'</td><td class="mono">'+esc(p.sdkAccessId||'')+'</td><td>'+p.companies+'</td>'+
-      '<td><div class="row-actions"><button class="act">Editar</button></div></td>';
-    tr.querySelector('.act').onclick=()=>openPbx(p);
+    const coleta=!p.apiConfigured?'<span class="badge warn">API não configurada</span>'
+      :(p.cdrSyncError?'<span class="badge warn" title="'+esc(p.cdrSyncError)+'">Erro na coleta</span>'
+      :'<span class="badge ok">Ativa</span>'+(p.cdrSyncedAt?' <span class="u-sub">'+new Date(p.cdrSyncedAt).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})+'</span>':''));
+    tr.innerHTML='<td class="u-name">'+esc(p.name)+'</td><td class="muted">'+esc(p.baseUrl)+'</td><td class="mono">'+esc(p.sdkAccessId||'')+'</td><td>'+p.companies+'</td><td>'+coleta+'</td>'+
+      '<td><div class="row-actions">'+(p.apiConfigured?'<button class="act act-sync">Sincronizar</button>':'')+'<button class="act act-edit">Editar</button></div></td>';
+    tr.querySelector('.act-edit').onclick=()=>openPbx(p);
+    const sy=tr.querySelector('.act-sync');
+    if(sy) sy.onclick=async()=>{sy.disabled=true;sy.textContent='Sincronizando…';$('#emp-msg').textContent='';
+      try{const r=await api('/v1/panel/pbx/'+p.id+'/sync',{method:'POST',body:'{}'});$('#emp-msg').style.color='var(--green)';$('#emp-msg').textContent=r.inserted+' chamada(s) nova(s) coletada(s).';await loadEmpresas();}
+      catch(e){$('#emp-msg').style.color='';$('#emp-msg').textContent=e.message;sy.disabled=false;sy.textContent='Sincronizar';}};
     rows.appendChild(tr);
   }
 }
@@ -576,6 +638,7 @@ function openPbx(p){
   EDIT_PBX=p; $('#dp-msg').textContent='';
   $('#dp-title').textContent=p?'Editar PBX':'Novo PBX';
   $('#dp-name').value=p?p.name:''; $('#dp-url').value=p?p.baseUrl:''; $('#dp-aid').value=p?(p.sdkAccessId||''):''; $('#dp-akey').value='';
+  $('#dp-cid').value=''; $('#dp-csec').value=''; $('#dp-csec').placeholder=p&&p.apiConfigured?'configurado; preencha só para trocar':'opcional';
   $('#dp-hint').textContent=p?'Para trocar URL ou AccessID, informe também o AccessKey. Só o nome? Deixe o AccessKey vazio.':'Linkus SDK → Integrações no portal do PBX. As credenciais são testadas antes de salvar; a chave fica cifrada.';
   $('#dlg-pbx').showModal();
 }
@@ -583,16 +646,118 @@ $('#dp-save').onclick=async()=>{
   const btn=$('#dp-save'); $('#dp-msg').textContent=''; btn.disabled=true; btn.textContent='Testando…';
   try{
     const body={name:$('#dp-name').value,baseUrl:$('#dp-url').value,sdkAccessId:$('#dp-aid').value,sdkAccessKey:$('#dp-akey').value};
+    const apiCid=$('#dp-cid').value.trim(), apiSec=$('#dp-csec').value.trim();
     if(EDIT_PBX){
       const patch={name:body.name};
       if(body.sdkAccessKey||body.baseUrl.replace(/\/+$/,'')!==EDIT_PBX.baseUrl||body.sdkAccessId!==EDIT_PBX.sdkAccessId) Object.assign(patch,{baseUrl:body.baseUrl,sdkAccessId:body.sdkAccessId,sdkAccessKey:body.sdkAccessKey});
+      if(apiCid||apiSec) Object.assign(patch,{apiClientId:apiCid,apiClientSecret:apiSec});
       await api('/v1/panel/pbx/'+EDIT_PBX.id,{method:'PATCH',body:JSON.stringify(patch)});
-    }else await api('/v1/panel/pbx',{method:'POST',body:JSON.stringify(body)});
+    }else await api('/v1/panel/pbx',{method:'POST',body:JSON.stringify({...body,apiClientId:apiCid||undefined,apiClientSecret:apiSec||undefined})});
+    $('#dp-cid').value=''; $('#dp-csec').value='';
     $('#dp-akey').value=''; $('#dlg-pbx').close(); await loadEmpresas();
   }catch(e){$('#dp-msg').textContent=e.message;}
   finally{btn.disabled=false;btn.textContent='Salvar';}
 };
 
+
+/* ---------- Dashboard ---------- */
+let DB_RANGE=7;
+const fmtDur=(s)=>{s=Math.round(s||0);if(s<60)return s+'s';const m=Math.floor(s/60);if(m<60)return m+'min '+String(s%60).padStart(2,'0')+'s';return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'min';};
+const ymd=(d)=>{const t=new Date(d.getTime()-d.getTimezoneOffset()*60000);return t.toISOString().slice(0,10);};
+document.querySelectorAll('#db-range .tab').forEach(b=>b.onclick=()=>{DB_RANGE=Number(b.dataset.r);document.querySelectorAll('#db-range .tab').forEach(x=>x.classList.toggle('active',x===b));loadDashboard();});
+function rangeDates(days){const to=new Date();const from=new Date();from.setDate(from.getDate()-(days?days-1:0));return{from:ymd(from),to:ymd(to)};}
+function syncLabel(r){return r.syncedAt?'Atualizado '+new Date(r.syncedAt).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'';}
+function scopeLabel(s){return s==='self'?'Suas chamadas':(s==='department'?'Chamadas do seu setor':'Chamadas da empresa');}
+async function loadDashboard(){
+  $('#db-msg').textContent='';
+  const {from,to}=rangeDates(DB_RANGE);
+  try{
+    const r=await api('/v1/panel/dashboard?from='+from+'&to='+to);
+    $('#db-sync').textContent=syncLabel(r);
+    $('#db-sub').textContent=scopeLabel(PERMS.view_dashboard);
+    const k=r.kpis;
+    if(!r.apiConfigured&&!k.total){
+      $('#db-kpis').innerHTML='';
+      $('#db-msg').style.color='var(--muted)';
+      $('#db-msg').textContent='A coleta de chamadas ainda não está configurada: cadastre o Client ID e o Client Secret da API do PBX em Empresas → PBX.';
+    }else $('#db-msg').style.color='';
+    const tile=(l,v,s)=>'<div class="kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';
+    $('#db-kpis').innerHTML=
+      tile('Recebidas',k.inbound,k.answeredInbound+' atendidas')+
+      tile('Taxa de atendimento',k.answerRate==null?'—':k.answerRate.toLocaleString('pt-BR')+'%','das recebidas')+
+      tile('Perdidas',k.missedInbound,'recebidas não atendidas')+
+      tile('Efetuadas',k.outbound,k.internal+' internas')+
+      tile('Conversa média',fmtDur(k.avgTalk),'total '+fmtDur(k.totalTalk))+
+      tile('Espera média',fmtDur(k.avgWait),'até atender');
+    // por dia (preenche dias sem chamada)
+    const days=[];const d0=new Date(from+'T12:00:00');const d1=new Date(to+'T12:00:00');
+    for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1)){const key=ymd(d);const e=r.byDay.find(x=>x.day===key)||{inbound:0,outbound:0,internal:0,missed:0};const tot=e.inbound+e.outbound+e.internal;
+      days.push({label:key.slice(8,10)+'/'+key.slice(5,7),total:tot,tip:'<b>'+key.split('-').reverse().join('/')+'</b><br>'+tot+' chamadas<br>Recebidas: '+e.inbound+' · Perdidas: '+e.missed+'<br>Efetuadas: '+e.outbound+' · Internas: '+e.internal});}
+    barChart($('#db-day'),days);
+    barChart($('#db-hour'),r.byHour.map(h=>({label:String(h.hour).padStart(2,'0'),total:h.total,tip:'<b>'+String(h.hour).padStart(2,'0')+'h às '+String(h.hour).padStart(2,'0')+'h59</b><br>'+h.total+' chamadas<br>Perdidas: '+h.missed})),2);
+    $('#db-users').innerHTML=r.byUser.length?r.byUser.map(u=>'<tr><td class="u-name">'+esc(u.name)+'</td><td class="num">'+u.total+'</td><td class="num">'+u.answered+'</td><td class="num">'+u.missed+'</td><td class="num">'+fmtDur(u.talk)+'</td></tr>').join('')
+      :'<tr><td colspan="5" class="muted" style="padding:16px;text-align:center">Sem chamadas no período.</td></tr>';
+    if(r.truncated) $('#db-msg').textContent='Período muito grande: mostrando as 50 mil chamadas mais recentes.';
+  }catch(e){$('#db-msg').style.color='';$('#db-msg').textContent=e.message;}
+}
+/* Barras verticais de uma série: topo arredondado (4px) apoiado na base, grade discreta, tooltip no hover. */
+function barChart(el,data,labelEvery){
+  const W=600,H=200,pl=30,pr=6,pt=8,pb=22,iw=W-pl-pr,ih=H-pt-pb;
+  const max=Math.max(1,...data.map(d=>d.total));const step=Math.pow(10,Math.floor(Math.log10(max)));const top=Math.max(4,Math.ceil(max/step)*step);
+  const n=data.length,slot=iw/n,bw=Math.max(2,Math.min(28,slot-2));
+  let g='';
+  for(let i=0;i<=4;i++){const v=top*i/4,y=pt+ih-(v/top)*ih;g+='<line class="grid" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'"/><text class="axis" x="'+(pl-6)+'" y="'+(y+3)+'" text-anchor="end">'+(Number.isInteger(v)?v:'')+'</text>';}
+  const every=labelEvery||Math.ceil(n/12);
+  data.forEach((d,i)=>{const x=pl+i*slot+(slot-bw)/2,h=(d.total/top)*ih,y=pt+ih-h,r=Math.min(4,bw/2,h);
+    const path=h>0?'<path class="bar" d="M'+x+','+(pt+ih)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+bw-r)+'Q'+(x+bw)+','+y+' '+(x+bw)+','+(y+r)+'V'+(pt+ih)+'Z"/>':'';
+    g+='<g data-i="'+i+'">'+path+'<rect class="hit" x="'+(pl+i*slot)+'" y="'+pt+'" width="'+slot+'" height="'+ih+'"/></g>';
+    if(i%every===0) g+='<text class="axis" x="'+(x+bw/2)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(d.label)+'</text>';});
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Gráfico de barras">'+g+'</svg>';
+  const tip=$('#chart-tip');
+  el.querySelectorAll('g[data-i]').forEach(gr=>{const d=data[Number(gr.dataset.i)];
+    gr.onmousemove=(ev)=>{tip.innerHTML=d.tip;tip.hidden=false;tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY-10)+'px';};
+    gr.onmouseleave=()=>{tip.hidden=true;};});
+}
+
+/* ---------- Chamadas ---------- */
+let CH_PAGE=1, CH_TOTAL=0;
+const DIR_ICON={Inbound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 4.5l-15 15m0 0h11.25M4.5 19.5V8.25"/></svg>Recebida',
+  Outbound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/></svg>Efetuada',
+  Internal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>Interna'};
+const ST={ANSWERED:['ok','Atendida'],'NO ANSWER':['warn','Não atendida'],BUSY:['warn','Ocupado'],FAILED:['off','Falhou'],VOICEMAIL:['off','Correio de voz']};
+function chFilters(){const p=new URLSearchParams();for(const [k,id] of [['q','#ch-q'],['from','#ch-from'],['to','#ch-to'],['type','#ch-type'],['status','#ch-status']]){const v=$(id).value.trim();if(v)p.set(k,v);}return p;}
+let chTimer; ['#ch-q','#ch-from','#ch-to','#ch-type','#ch-status'].forEach(id=>$(id).addEventListener(id==='#ch-q'?'input':'change',()=>{clearTimeout(chTimer);chTimer=setTimeout(()=>{CH_PAGE=1;loadChamadas();},300);}));
+$('#ch-prev').onclick=()=>{if(CH_PAGE>1){CH_PAGE--;loadChamadas();}};
+$('#ch-next').onclick=()=>{if(CH_PAGE*50<CH_TOTAL){CH_PAGE++;loadChamadas();}};
+$('#ch-export').onclick=async()=>{
+  $('#ch-msg').textContent='';
+  try{const r=await fetch('/v1/panel/calls/export?'+chFilters(),{headers:{Authorization:'Bearer '+JWT}});
+    if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.error||('HTTP '+r.status));}
+    const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='chamadas-'+ymd(new Date())+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }catch(e){$('#ch-msg').textContent=e.message;}
+};
+function partyHtml(num,name){return '<div class="u-name" style="font-weight:600">'+esc(name||num||'—')+'</div>'+(name&&num?'<div class="u-sub">'+esc(num)+'</div>':'');}
+async function loadChamadas(){
+  $('#ch-msg').textContent=''; $('#ch-export').hidden=!can('export_cdr');
+  $('#ch-sub').textContent=scopeLabel(PERMS.view_cdr);
+  if(!$('#ch-from').value){const r=rangeDates(7);$('#ch-from').value=r.from;$('#ch-to').value=r.to;}
+  const rows=$('#ch-rows'); rows.innerHTML='<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
+  try{
+    const p=chFilters();p.set('page',CH_PAGE);p.set('pageSize',50);
+    const r=await api('/v1/panel/calls?'+p);
+    CH_TOTAL=r.total;
+    $('#ch-count').textContent=r.total?((CH_PAGE-1)*50+1)+'–'+Math.min(CH_PAGE*50,r.total)+' de '+r.total.toLocaleString('pt-BR'):'';
+    $('#ch-prev').disabled=CH_PAGE<=1; $('#ch-next').disabled=CH_PAGE*50>=r.total;
+    if(!r.items.length){rows.innerHTML='<tr><td colspan="7" class="empty-cdr">Nenhuma chamada no período.</td></tr>';return;}
+    rows.innerHTML=r.items.map(c=>{const st=ST[c.status]||['off',c.status||'—'];
+      return '<tr><td>'+(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td>'+
+        '<td><span class="dir">'+(DIR_ICON[c.direction]||esc(c.direction||'—'))+'</span></td>'+
+        '<td>'+partyHtml(c.fromNumber,c.fromName)+'</td><td>'+partyHtml(c.toNumber,c.toName)+'</td>'+
+        '<td>'+(c.agent?esc(c.agent):'<span class="muted">—</span>')+'</td>'+
+        '<td><span class="badge '+st[0]+'">'+esc(st[1])+'</span></td>'+
+        '<td class="num">'+(c.status==='ANSWERED'?fmtDur(c.talk):'—')+'</td></tr>';}).join('');
+  }catch(e){rows.innerHTML='';$('#ch-msg').textContent=e.message;}
+}
 
 /* ---------- Acessos ---------- */
 const ROLE_LABEL={SUPER_ADMIN:'Master',PARTNER_ADMIN:'Master do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};

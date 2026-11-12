@@ -50,6 +50,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `ALLOWED_ORIGINS` | não | Origens liberadas no CORS, separadas por vírgula. Vazio = nega chamadas cross-origin (a extensão não precisa de CORS; o painel é servido pelo próprio backend). |
 | `TRUST_PROXY` | não | `true` quando a API fica atrás de reverse proxy (lê `X-Forwarded-*`) |
 | `SIGN_TTL_SECONDS` | não | Validade da assinatura do Linkus SDK, em segundos. Padrão `43200` (12 h); mínimo `1800` |
+| `CDR_SYNC_ENABLED` / `CDR_SYNC_INTERVAL_S` / `CDR_BACKFILL_DAYS` | não | Coleta de chamadas: liga/desliga (padrão `true`), intervalo (padrão `120` s) e dias de histórico na primeira coleta (padrão `30`) |
+| `PBX_TIMEZONE_OFFSET` | não | Fuso do relógio do PBX para CDR sem timestamp e para os filtros por data. Padrão `-03:00` |
 | `PANEL_FRAME_ANCESTORS` | não | Quem pode embutir o `/painel` em iframe. Padrão `'self' https://*.wts.chat https://*.flw.chat` |
 | `PBX_BASE_URL`, `SDK_ACCESS_ID`, `SDK_ACCESS_KEY` | só p/ o seed | Usadas **apenas** por `scripts/seed-comunic.mjs` para cadastrar o PBX no banco (a chave vai cifrada). A API em si lê o PBX do banco. |
 | `DB_PASSWORD` | produção | Senha do Postgres. **Obrigatória** no `docker-compose.yml` (sem ela a stack não sobe); no dev o padrão é `comunic` |
@@ -81,6 +83,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"      # 
 | `routes-contacts.ts` | Contatos (`/v1/contacts`) |
 | `routes-companies.ts` | Módulo Empresas: empresas, PBX, faixas e token do Helena |
 | `routes-directory.ts` | Diretório de ramais da empresa (transferência na extensão) |
+| `cdr-sync.ts` | Coleta periódica do CDR pela OpenAPI e associação empresa/atendente |
+| `routes-calls.ts` | Chamadas (lista, exportação), Dashboard e "Sincronizar agora" |
 | `routes-access.ts` | Permissões efetivas (`/v1/panel/me`) e módulo Acessos (concessões) |
 | `routes-emergency.ts` | Login de emergência (senha Argon2id + TOTP, bloqueios, auditoria) |
 | `totp.ts` | Códigos TOTP (RFC 6238) |
@@ -102,7 +106,9 @@ Schema em `prisma/schema.prisma`; migrations em `prisma/migrations/`.
 | `audit_log` | Ações sensíveis (vínculo/desvínculo de ramal, empresas, logins de emergência, …) |
 | `permission_grant` | Permissões extras por usuário/empresa (quem concedeu e quando) |
 | `emergency_admin` | Contas de acesso de emergência: hash Argon2id da senha, segredo TOTP cifrado, bloqueio |
-| `calls`, `contacts_cache`, `did_route` | Reservadas para a ingestão de CDR e espelho de contatos (ainda não usadas) |
+| `calls` | Chamadas coletadas do PBX (empresa, atendente, outra ponta, durações, `raw` do PBX) |
+| `did_route` | DID → empresa, para chamadas que não passam por um ramal (ex.: fila) |
+| `contacts_cache` | Reservada para espelho de contatos (ainda não usada) |
 
 Alterar o schema:
 ```powershell

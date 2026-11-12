@@ -60,7 +60,7 @@ async function refreshToken(pbx: PbxCreds, refresh: string): Promise<string> {
 }
 
 /** Token válido do cache; renova por refresh_token ou, em último caso, get_token. */
-async function getToken(pbx: PbxCreds, force = false): Promise<string> {
+export async function getToken(pbx: PbxCreds, force = false): Promise<string> {
   const e = cache.get(key(pbx));
   const now = Date.now();
   if (!force && e && now < e.accessExp - MARGIN_MS) return e.access;
@@ -107,4 +107,26 @@ export async function createSignature(pbx: PbxCreds, extension: string, expireTi
   }
   if (!r.sign) throw new Error(`sign/create sem sign (HTTP ${r.status}): ${r.text}`);
   return r.sign;
+}
+
+
+/**
+ * GET na OpenAPI do PBX (ex.: 'v1.0/cdr/list'). Usa o token em cache e, se o PBX
+ * disser que o token expirou/é inválido, pede outro uma vez. Lança em erro.
+ */
+export async function openapiGet(pbx: PbxCreds, path: string, query: Record<string, string | number> = {}): Promise<any> {
+  const call = async (token: string) => {
+    const qs = new URLSearchParams({ ...Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])), access_token: token });
+    const res = await fetch(`${pbx.baseUrl}/openapi/${path}?${qs}`, { headers: HEADERS });
+    const text = await res.text();
+    return { status: res.status, json: safeJson(text), text };
+  };
+  let r = await call(await getToken(pbx));
+  if (r.json && r.json.errcode && r.json.errcode !== 0) {
+    r = await call(await getToken(pbx, true)); // token expirado/revogado: tenta uma vez com token novo
+  }
+  if (!r.json || r.json.errcode !== 0) {
+    throw new Error(`OpenAPI ${path}: ${r.json?.errmsg ?? 'HTTP ' + r.status} (errcode ${r.json?.errcode ?? '?'})`);
+  }
+  return r.json;
 }
