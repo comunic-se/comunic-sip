@@ -26,7 +26,7 @@ O painel pede a sessão à extensão Comunic.Chat (mensagem externa `PANEL_SESSI
 
 Se a sessão expirar (401), o painel volta à tela de conexão e tenta de novo pela extensão.
 
-**Acesso de emergência:** sem Comunic Chat/extensão, um SUPER_ADMIN entra com usuário + senha + código do autenticador (seção "Acesso de emergência" em `seguranca.md`). Sessão de 1 h, com aviso e botão Sair. A antiga entrada manual por token (dev) foi removida.
+**Acesso de emergência:** sem Comunic Chat/extensão, um SUPER_ADMIN entra com usuário + senha + código do autenticador (seção "Acesso de emergência" em `seguranca.md`). Sessão de 1 h, **presa à aba** onde foi aberta (não vaza para outras abas e some ao fechar), com aviso amarelo e botão Sair. Depois de Sair, o painel não entra sozinho pela extensão até você clicar em "Entrar pela extensão". A antiga entrada manual por token (dev) foi removida.
 
 ### Embutir só no Comunic Chat
 A rota `/painel` envia `Content-Security-Policy: frame-ancestors 'self' https://*.wts.chat https://*.flw.chat`. Outro site que tente embutir o painel é bloqueado pelo navegador. Para whitelabel em outro domínio, ajuste `PANEL_FRAME_ANCESTORS`.
@@ -44,7 +44,7 @@ Ninguém recebe mais acesso do que o necessário. O **papel** dá o básico; qua
 | SUPERVISOR | `role_override` | Ver dados do(s) próprio(s) setor(es) |
 | AGENT | Perfil **Atendente** / **Atendente restrito** (padrão) | Ver só o **próprio** ramal, chamadas e gravações |
 
-Resolução (`resolveScope` em `src/rbac.ts`): `platform_role` > `role_override` > perfil do Comunic Chat. O papel é calculado a cada login; mudanças de perfil no Comunic Chat valem no próximo login (sessão máx. 12 h).
+Resolução (`resolveScope` em `src/rbac.ts`): `platform_role` > `role_override` > perfil do Comunic Chat. O papel é calculado a cada login; mudanças de perfil no Comunic Chat valem no próximo login (sessão máx. 12 h). Já a remoção de papel de plataforma, a desativação da empresa ou da conta de emergência e qualquer ajuste em Acessos valem **na hora**: o backend revalida a sessão no banco a cada pedido.
 
 ## Matriz (papel → escopo)
 Escopos: `all` > `partner` > `company` > `department` > `self`. "—" = sem acesso.
@@ -98,7 +98,7 @@ Regras de segurança:
 - Nova empresa: ID da conta no Comunic Chat (UUID), nome, PBX, faixa inicial, token do Helena (opcional, pode ser depois) e se já nasce ativa.
 - Credenciais do PBX e token do Helena são **testados antes de salvar** e ficam cifrados; a tela só mostra "Configurado"/"Pendente".
 - Faixas não podem se sobrepor a faixas de outras empresas no mesmo PBX; remover faixa com ramal vinculado é recusado.
-- Desativar uma empresa pede confirmação (segundo clique) e bloqueia o login integrado e o painel dela na próxima sessão. Ninguém desativa a própria empresa.
+- Desativar uma empresa pede confirmação (segundo clique) e bloqueia o login integrado e o painel dela na hora (sessões abertas caem no próximo pedido). Ninguém desativa a própria empresa.
 - PARTNER_ADMIN só vê e cria empresas do próprio parceiro e só usa PBXs que já atendem suas empresas.
 
 ## Regras do módulo Ramais
