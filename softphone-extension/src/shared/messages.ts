@@ -1,3 +1,5 @@
+import type { AudioSettings } from './audio';
+
 // Tipos de mensagem trocadas entre popup, service worker (background) e offscreen.
 // Cada mensagem carrega um `target` para que cada ouvinte processe só o que é dele.
 
@@ -71,7 +73,9 @@ export interface Contact {
 
 // popup -> background
 export type ToBackground =
-  | { target: 'background'; type: 'INIT_SDK'; config: SdkConfig }
+  // Ajustes de áudio (o offscreen pede ao iniciar) e testes de som
+  | { target: 'background'; type: 'GET_AUDIO' }
+  | { target: 'background'; type: 'TEST_SOUND'; kind: 'ring' | 'speaker' }
   | { target: 'background'; type: 'GET_STATUS' }
   | { target: 'background'; type: 'CALL'; number: string }
   | { target: 'background'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
@@ -96,7 +100,9 @@ export type ToOffscreen =
   | { target: 'offscreen'; type: 'CALL_ACTION'; action: CallAction; digit?: string; arg?: string }
   | { target: 'offscreen'; type: 'GET_HISTORY' }
   // Status atual do registro (presença no painel)
-  | { target: 'offscreen'; type: 'GET_REG' };
+  | { target: 'offscreen'; type: 'GET_REG' }
+  | { target: 'offscreen'; type: 'AUDIO_SETTINGS'; audio: AudioSettings }
+  | { target: 'offscreen'; type: 'TEST_SOUND'; kind: 'ring' | 'speaker'; audio: AudioSettings };
 
 // background -> popup
 export type ToPopup =

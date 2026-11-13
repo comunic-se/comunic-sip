@@ -6,6 +6,7 @@
 // demo oficial. O fluxo abaixo segue essas notas.
 import { init } from 'ys-webrtc-sdk-core';
 import type { AnyMessage, CallAction, CallState, HistoryItem, RegStatus, SdkConfig } from './shared/messages';
+import { DEFAULT_AUDIO, type AudioSettings } from './shared/audio';
 
 // Operador devolvido pelo SDK: { phone, pbx, destroy }
 let operator: any = null;
@@ -15,36 +16,98 @@ let transferState:
   | { customer: any; customerCallId: string; target: string; consultSession: any; consultCallId: string | null }
   | null = null;
 
-// --- Toque de chamada recebida (WebAudio, discreto) ---
+// --- Ajustes de áudio (Ajustes → Áudio no popup) ---
+// O offscreen não acessa chrome.storage: pede ao background ao iniciar e recebe
+// AUDIO_SETTINGS a cada mudança.
+let audio: AudioSettings = { ...DEFAULT_AUDIO };
+
+/** Confere se o dispositivo ainda existe (fone desconectado → volta ao padrão). */
+async function deviceExists(id: string, kind: MediaDeviceKind): Promise<boolean> {
+  if (!id) return false;
+  try {
+    const list = await navigator.mediaDevices.enumerateDevices();
+    return list.some((d) => d.kind === kind && d.deviceId === id);
+  } catch { return false; }
+}
+
+/** Direciona um <audio> ou AudioContext para a saída escolhida (ou a padrão). */
+async function routeTo(target: any, id: string): Promise<void> {
+  if (typeof target?.setSinkId !== 'function') return;
+  const sink = (await deviceExists(id, 'audiooutput')) ? id : '';
+  try { await target.setSinkId(sink); } catch (e) { console.warn('[Comunic.SIP] setSinkId falhou', e); }
+}
+
+/** Microfone para o SDK: o escolhido, se ainda estiver conectado. */
+async function applyMic(): Promise<void> {
+  const phone = operator?.phone;
+  if (!phone) return;
+  phone.deviceIds = (await deviceExists(audio.micId, 'audioinput')) ? { microphoneId: audio.micId } : {};
+}
+
+async function applyAudio(a: AudioSettings): Promise<void> {
+  audio = { ...DEFAULT_AUDIO, ...a };
+  await applyMic();
+  const el = document.getElementById('remote-audio');
+  if (el) await routeTo(el, audio.speakerId); // troca na hora, mesmo em chamada
+  if (ringCtx) await routeTo(ringCtx, audio.ringId);
+}
+
+chrome.runtime.sendMessage({ target: 'background', type: 'GET_AUDIO' })
+  .then((a) => { if (a) applyAudio(a as AudioSettings); })
+  .catch(() => { /* background acordando; segue com o padrão */ });
+
+/** Volume 0–100 → ganho (curva quadrática, mais natural ao ouvido). */
+function ringGain(volume: number): number {
+  const v = Math.max(0, Math.min(100, volume)) / 100;
+  return 0.3 * v * v;
+}
+
+/** Duas notas curtas (o "plim-plom" do toque). */
+function chime(ctx: AudioContext, peak: number): void {
+  const t0 = ctx.currentTime;
+  [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0, t0 + t);
+    gain.gain.linearRampToValueAtTime(Math.max(peak, 0.0002), t0 + t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + t + 0.35);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0 + t);
+    osc.stop(t0 + t + 0.4);
+  });
+}
+
+// --- Toque de chamada recebida (WebAudio) ---
 let ringCtx: AudioContext | null = null;
 let ringTimer: ReturnType<typeof setInterval> | null = null;
 
 function startRing(): void {
-  if (ringTimer !== null) return; // já tocando
+  if (ringTimer !== null || !audio.ringEnabled) return; // já tocando, ou toque desligado
   try {
     ringCtx = ringCtx ?? new AudioContext();
-    if (ringCtx.state === 'suspended') ringCtx.resume().catch(() => { /* */ });
     const ctx = ringCtx;
-    const chime = () => {
-      const t0 = ctx.currentTime;
-      [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = f;
-        gain.gain.setValueAtTime(0, t0 + t);
-        gain.gain.linearRampToValueAtTime(0.06, t0 + t + 0.02); // volume baixo = sutil
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + t + 0.35);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(t0 + t);
-        osc.stop(t0 + t + 0.4);
-      });
-    };
-    chime();
-    ringTimer = setInterval(chime, 2500);
+    if (ctx.state === 'suspended') ctx.resume().catch(() => { /* */ });
+    const play = () => chime(ctx, ringGain(audio.ringVolume));
+    ringTimer = setInterval(play, 2500);
+    // Direciona para o dispositivo de toque e soa a primeira vez (se ainda estiver tocando).
+    routeTo(ctx, audio.ringId).finally(() => { if (ringTimer !== null) play(); });
   } catch (e) {
     console.warn('[Comunic.SIP] toque falhou', e);
   }
+}
+
+/** Teste disparado em Ajustes: toca no dispositivo de toque ou no alto-falante. */
+async function testSound(kind: 'ring' | 'speaker', a: AudioSettings): Promise<void> {
+  await applyAudio(a);
+  const ctx = new AudioContext();
+  await routeTo(ctx, kind === 'ring' ? audio.ringId : audio.speakerId);
+  if (ctx.state === 'suspended') await ctx.resume().catch(() => { /* */ });
+  const peak = kind === 'ring' ? ringGain(audio.ringVolume) : 0.12;
+  chime(ctx, peak);
+  setTimeout(() => chime(ctx, peak), 900);
+  setTimeout(() => ctx.close().catch(() => { /* */ }), 2200);
 }
 
 function stopRing(): void {
@@ -137,6 +200,7 @@ function attachRemoteAudio(stream: MediaStream): void {
   el.srcObject = stream;
   el.muted = false;
   el.volume = 1;
+  routeTo(el, audio.speakerId); // alto-falante escolhido em Ajustes
   // Força a reprodução: em documento offscreen o autoplay às vezes não dispara sozinho.
   el.play().then(
     () => console.log('[Comunic.SIP] áudio remoto tocando', stream.getAudioTracks()),
@@ -195,6 +259,7 @@ async function initSdk(config: SdkConfig): Promise<void> {
       username: config.extension,
       secret: config.signature,
       pbxURL: config.pbxURL,
+      ...((await deviceExists(audio.micId, 'audioinput')) ? { deviceIds: { microphoneId: audio.micId } } : {}),
     });
 
     console.log('[Comunic.SIP] init resolvido. operator keys:', Object.keys(operator ?? {}));
@@ -286,6 +351,7 @@ async function ensureMic(): Promise<boolean> {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     // Só confirmamos a permissão; o SDK abre o seu próprio stream na chamada.
     stream.getTracks().forEach((t) => t.stop());
+    await applyMic(); // microfone escolhido (ou o padrão, se foi desconectado)
     return true;
   } catch {
     // No offscreen não dá pra exibir o prompt: pedimos ao background abrir a janela.
@@ -417,6 +483,8 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
   }
   switch (raw.type) {
     case 'INIT': pendingRenew = null; initSdk(raw.config); break;
+    case 'AUDIO_SETTINGS': applyAudio(raw.audio); break;
+    case 'TEST_SOUND': testSound(raw.kind, raw.audio); break;
     case 'RENEW': renew(raw.config); break;
     case 'CALL': doCall(raw.number); break;
     case 'CALL_ACTION':

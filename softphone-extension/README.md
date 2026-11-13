@@ -8,11 +8,13 @@ O nome exibido no navegador é **Comunic.Chat**; internamente o projeto se chama
 
 ```powershell
 npm install
-npm run build        # gera dist/ (esbuild); use npm run watch para rebuild automático
+npm run build:prod   # produção: backend https://177.93.130.128 + PBX comunic.ras.yeastar.com
+npm run build -- --backend=http://localhost:8787 --pbx=https://<pbx>   # outro ambiente (dev, parceiro)
+npm run watch -- --backend=http://localhost:8787                        # rebuild automático
 npm run typecheck    # checagem de tipos (tsc --noEmit)
 ```
 1. `chrome://extensions` → ligar **Modo do desenvolvedor** → **Carregar sem compactação** → selecionar `dist/`.
-2. Abrir a extensão → engrenagem → **Login integrado** → URL do backend (dev: `http://localhost:8787`) → **Ativar login integrado** (o Chrome pede permissão para o host).
+2. Abrir o Comunic Chat: o ramal registra sozinho. **Não há tela de conectividade**: o backend e o PBX vêm do build (`--backend` é obrigatório; `--pbx` aceita vários, separados por vírgula). A engrenagem abre só os ajustes de **áudio** e o "Sobre".
 3. Abrir ou atualizar o Comunic Chat: o ramal registra sozinho.
 
 Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chrome://extensions`.
@@ -37,7 +39,9 @@ Depois de qualquer alteração: `npm run build` e recarregar a extensão em `chr
 |---|---|---|
 | Service worker | `src/background.ts` | Orquestra tudo: login integrado, notificações, mensagens entre popup e offscreen, contatos via backend, ponte externa com o painel |
 | Offscreen document | `src/offscreen.ts` | Roda o SDK do Yeastar (registro SIP, áudio, eventos de chamada) e o toque de chamada recebida (WebAudio). Fica vivo com o popup fechado. |
-| Popup | `src/popup/*` | Interface: Teclado, Contatos, Histórico, telas de chamada e Ajustes |
+| Popup | `src/popup/*` | Interface: Teclado, Contatos (contatos do Comunic Chat e ramais da empresa com status), Histórico, telas de chamada e Ajustes de áudio |
+| Config de build | `src/shared/config.ts` | `BACKEND_URL` e `BUILD_INFO`, injetados pelo `build.mjs` |
+| Áudio | `src/shared/audio.ts` | Ajustes de áudio: microfone, alto-falante, dispositivo e volume do toque |
 | Chamadas | `src/call/` | Tela de chamada e lógica de controle usada pelo popup |
 | Click-to-call | `src/content/click-to-call.ts` | Content script nas páginas do Comunic Chat (`*.wts.chat`, `*.flw.chat`, exceto `api.*`). Não altera o DOM do app (React): o botão "Ligar" fica numa camada própria (Shadow DOM fechado). Build separado em IIFE |
 | Telefones | `src/shared/phone.ts` | Reconhece e normaliza números (DDD + número, sem 55, como a aba Contatos) |
@@ -64,7 +68,8 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 ### O que fica guardado
 | Onde | Chave | Conteúdo |
 |---|---|---|
-| `chrome.storage.local` | `backendUrl`, `pbxURL`, `extension`, `signature`, `signExpiresAt` | Configuração do ramal e vencimento da assinatura (epoch, segundos) |
+| `chrome.storage.local` | `pbxURL`, `extension`, `signature`, `signExpiresAt` | Ramal e assinatura entregues pelo backend e o vencimento dela (epoch, segundos) |
+| `chrome.storage.local` | `audio` | Ajustes de áudio (`micId`, `speakerId`, `ringId`, `ringVolume`, `ringEnabled`). O offscreen recebe por `GET_AUDIO`/`AUDIO_SETTINGS` (ele não acessa storage) |
 | `chrome.storage.session` (só memória, some ao fechar o navegador) | `helenaToken` | Último token de sessão do Comunic Chat captado |
 | `chrome.storage.session` | `panelJwt` | JWT do backend (12 h) usado pela aba Contatos |
 
@@ -72,7 +77,7 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 - `offscreen`, `storage`, `notifications`, `webRequest`, `alarms` (renovação da assinatura), `contextMenus` ("Ligar para…").
 - `content_scripts`: páginas do Comunic Chat, para o click-to-call.
 - `host_permissions`: `api.wts.chat` e `api.flw.chat` (para captar a sessão).
-- `optional_host_permissions`: pedidas na hora de ativar o login integrado (backend e PBX).
+- `host_permissions`: além do Comunic Chat, o backend e o PBX informados no build (gerados no `dist/manifest.json`). Não há permissão opcional pedida em tempo de execução.
 - `externally_connectable`: `localhost`, `127.0.0.1` e `*.comunic.chat` — quem pode pedir sessão à extensão (o painel).
 
 ## Padrão visual

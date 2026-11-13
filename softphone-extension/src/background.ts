@@ -2,6 +2,8 @@
 // entre popup e offscreen e guarda o último status de registro e da chamada.
 import type { AnyMessage, CallState, StatusSnapshot, SdkConfig } from './shared/messages';
 import { toDialable, formatBR } from './shared/phone';
+import { BACKEND_URL } from './shared/config';
+import { DEFAULT_AUDIO, type AudioSettings } from './shared/audio';
 
 const NOTIF_ID = 'comunic-call';
 const MISSED_ID = 'comunic-missed';
@@ -98,6 +100,20 @@ function broadcastToPopup(msg: Extract<AnyMessage, { target: 'popup' }>): void {
   chrome.runtime.sendMessage(msg).catch(() => { /* popup pode estar fechado */ });
 }
 
+// ---------- Ajustes de áudio ----------
+// Ficam em chrome.storage.local (o offscreen não acessa storage): o offscreen pede
+// com GET_AUDIO ao iniciar, e cada mudança feita no popup é repassada a ele.
+async function loadAudio(): Promise<AudioSettings> {
+  const { audio } = await chrome.storage.local.get('audio');
+  return { ...DEFAULT_AUDIO, ...(audio ?? {}) };
+}
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.audio) return;
+  chrome.offscreen.hasDocument?.().then((has) => {
+    if (has) loadAudio().then((audio) => sendToOffscreen({ target: 'offscreen', type: 'AUDIO_SETTINGS', audio }));
+  });
+});
+
 // ---------- Login integrado ----------
 // Observa as requisições do Comunic Chat para a API da Helena e captura o Bearer
 // do usuário. Esse token é enviado uma vez ao backend, que valida a identidade,
@@ -113,9 +129,9 @@ const RENEW_RETRY_MIN = 5;
 
 type AuthResponse = { extension: string; pbxUrl: string; sign: string; signExpiresAt?: number; token?: string };
 
-async function backendBase(): Promise<string | null> {
-  const { backendUrl } = await chrome.storage.local.get('backendUrl');
-  return backendUrl ? String(backendUrl).replace(/\/+$/, '') : null;
+/** Backend definido no build (shared/config.ts). */
+async function backendBase(): Promise<string> {
+  return BACKEND_URL;
 }
 
 /** Chama /v1/auth/extension e guarda config, validade e JWT. */
@@ -247,7 +263,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 async function loginIntegrado(helenaToken: string): Promise<void> {
   const base = await backendBase();
-  if (!base) { console.log('[Comunic.SIP][login] sem backendUrl configurado — ignorando'); return; }
   // Já conectado/conectando com assinatura válida? Não refaz.
   if ((lastStatus.status === 'registered' || lastStatus.status === 'connecting') && !(await signatureExpiringSoon())) return;
 
@@ -291,11 +306,9 @@ console.log('[Comunic.SIP][login] observador de token ativo');
 // Bearer já capturado da Helena para abrir a sessão do painel no backend.
 // Assim o gestor não precisa colar token nenhum.
 async function getPanelSession(): Promise<unknown> {
-  const { backendUrl } = await chrome.storage.local.get('backendUrl');
   const { helenaToken } = await chrome.storage.session.get('helenaToken');
-  if (!backendUrl) return { error: 'backend não configurado na extensão' };
   if (!helenaToken) return { error: 'sessão do Comunic Chat ainda não captada — abra/atualize o Comunic Chat' };
-  const res = await fetch(`${String(backendUrl).replace(/\/+$/, '')}/v1/panel/session`, {
+  const res = await fetch(`${BACKEND_URL}/v1/panel/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ helenaToken }),
@@ -307,10 +320,7 @@ async function getPanelSession(): Promise<unknown> {
 // recebe a sessão. O manifest (externally_connectable) já limita os domínios; aqui
 // conferimos a origem exata, então nem outro site do mesmo domínio consegue pedir.
 async function trustedPanelOrigin(sender: chrome.runtime.MessageSender): Promise<boolean> {
-  const { backendUrl } = await chrome.storage.local.get('backendUrl');
-  if (!backendUrl) return false;
-  let expected: string;
-  try { expected = new URL(String(backendUrl)).origin; } catch { return false; }
+  const expected = new URL(BACKEND_URL).origin;
   const origin = sender.origin ?? (sender.url ? new URL(sender.url).origin : '');
   return origin === expected;
 }
@@ -347,11 +357,9 @@ async function ensurePanelJwt(force = false): Promise<string | null> {
 }
 
 async function backendContacts(path: string, init: RequestInit): Promise<any> {
-  const { backendUrl } = await chrome.storage.local.get('backendUrl');
-  if (!backendUrl) return { error: 'backend não configurado' };
   let jwt = await ensurePanelJwt();
   if (!jwt) return { error: 'Abra o Comunic Chat para carregar seus contatos.' };
-  const base = String(backendUrl).replace(/\/+$/, '');
+  const base = BACKEND_URL;
   const call = (t: string) => fetch(`${base}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}`, ...(init.headers ?? {}) },
@@ -388,10 +396,13 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
 
   (async () => {
     switch (raw.type) {
-      case 'INIT_SDK': {
+      case 'GET_AUDIO': {
+        sendResponse(await loadAudio());
+        return;
+      }
+      case 'TEST_SOUND': {
         await ensureOffscreen();
-        const config: SdkConfig = raw.config;
-        sendToOffscreen({ target: 'offscreen', type: 'INIT', config });
+        sendToOffscreen({ target: 'offscreen', type: 'TEST_SOUND', kind: raw.kind, audio: await loadAudio() });
         break;
       }
       case 'CALL': {

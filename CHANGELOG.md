@@ -5,6 +5,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Extensão: ajustes de áudio.** A engrenagem permite escolher o microfone (vale na próxima chamada), o alto-falante da voz da chamada e o dispositivo do toque (esses dois mudam na hora). Também dá para ajustar o volume do toque, ligar ou desligar o toque, testar o som e medir o nível do microfone. Se um dispositivo é desconectado, a extensão volta sozinha ao padrão do sistema.
+- **Extensão: ramais da organização na aba Contatos** (alternância Contatos / Ramais), com busca por nome ou número, status Conectado/Desconectado e botão de ligar. O `/v1/directory` passa a devolver o `status` de presença.
+- **Deploy em VM dedicada:**
+  - Caddy com HTTPS automático, inclusive certificado de IP (`docker-compose.caddy.yml`, `deploy/Caddyfile`);
+  - `scripts/preparar-vm.sh` (Docker, firewall, fail2ban, atualizações automáticas);
+  - `scripts/gerar-env.sh` (segredos novos);
+  - `scripts/primeiro-acesso.mjs` (PBX e empresa num banco novo, com segredos digitados sem eco e testados no PBX).
+
+### Alterado
+- **Extensão sem configuração de conectividade:** backend e PBX são definidos no build (`npm run build:prod` ou `--backend`/`--pbx`) e entram como permissões fixas no manifest gerado. Saíram a URL do backend, o "Ativar login integrado" e o modo manual (PBX/ramal/assinatura digitados), além da mensagem `INIT_SDK`.
 - **Segurança para produção:** extensão só entrega sessão à origem exata do backend; limite de requisições (geral e apertado em login, emergência, presença, exportação, sincronizar) com chave por sessão; cabeçalhos de segurança e CSP do painel; backup cifrado do banco com rotação e restauração/teste em banco temporário (`scripts/backup.sh`, `scripts/restaurar.sh`).
 - **Click-to-call no Comunic Chat:** botão "Ligar" ao passar o mouse sobre um telefone (sem alterar o DOM do app) e menu de clique direito "Ligar para…"; reconhecimento de telefones brasileiros com recusa de datas, CPF/CNPJ e valores; só disca com ramal registrado e sem chamada em andamento.
 - **Gravações no painel:** lista com filtros, player no rodapé e botão de ouvir também em Chamadas; áudio por proxy autenticado (nada armazenado), permissão separada para **baixar** (`download_recording`), auditoria de cada escuta/download. Gravações ligadas às chamadas pelo `uid` do CDR. Migration `20261112170000_recordings`.

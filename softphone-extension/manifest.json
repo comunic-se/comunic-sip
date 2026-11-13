@@ -36,18 +36,8 @@
     "https://api.flw.chat/*"
   ],
   "externally_connectable": {
-    "matches": [
-      "http://localhost/*",
-      "http://127.0.0.1/*",
-      "https://*.comunic.chat/*",
-      "https://177.93.130.128/*"
-    ]
+    "matches": []
   },
-  "optional_host_permissions": [
-    "https://*/*",
-    "http://127.0.0.1/*",
-    "http://localhost/*"
-  ],
   "content_scripts": [
     {
       "matches": [

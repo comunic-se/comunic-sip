@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:prod": "node build.mjs --backend=https://177.93.130.128 --pbx=https://comunic.ras.yeastar.com"
   },
   "keywords": [],
   "author": "",

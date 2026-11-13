@@ -1,11 +1,11 @@
-// Diretório de ramais da empresa (usado na transferência da extensão).
+// Diretório de ramais da empresa (transferência e aba Contatos → Ramais da extensão).
 // Fonte: vínculos atendente → ramal do Comunic.SIP + nomes vindos do Helena.
 // Qualquer usuário autenticado vê só a própria empresa.
 import type { FastifyInstance } from 'fastify';
 import { prisma } from './db.js';
 import { requireAuth, type PanelToken } from './auth.js';
 import { listAgentsCached } from './helena-admin.js';
-import { setPresence } from './presence.js';
+import { getPresence, setPresence } from './presence.js';
 import { LIMITS } from './rate-limit.js';
 
 export async function registerDirectoryRoutes(app: FastifyInstance): Promise<void> {
@@ -41,6 +41,8 @@ export async function registerDirectoryRoutes(app: FastifyInstance): Promise<voi
         extension: l.extensionNumber,
         name: names.get(l.helenaUserId)?.name || `Ramal ${l.extensionNumber}`,
         me: l.helenaUserId === user.userId,
+        // Conectado = extensão registrada no PBX há pouco (mesma regra do painel).
+        status: getPresence(company.id, l.helenaUserId).status,
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     return { items };

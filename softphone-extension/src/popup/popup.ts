@@ -7,9 +7,10 @@ import type {
   Contact,
   HistoryItem,
   RegStatus,
-  SdkConfig,
   StatusSnapshot,
 } from '../shared/messages';
+import { DEFAULT_AUDIO, type AudioSettings } from '../shared/audio';
+import { BUILD_INFO } from '../shared/config';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
@@ -68,7 +69,9 @@ function showView(name: ViewName): void {
     t.classList.toggle('active', (t as HTMLElement).dataset.tab === name);
   });
   if (name === 'historico') loadHistory();
-  if (name === 'contatos') loadContacts();
+  if (name === 'contatos') { if (cMode === 'ramais') loadExtensions(); else loadContacts(); }
+  if (name === 'settings') openAudioSettings();
+  else stopMicTest();
 }
 
 // ---------- Histórico (CDR) ----------
@@ -154,7 +157,7 @@ function renderStatus(status: RegStatus, detail?: string): void {
   lastRegDetail = detail;
   statusDot.className = `dot dot--${status}`;
   appbarTitle.textContent = extensionNumber ? `Ramal ${extensionNumber}` : 'Comunic.SIP';
-  statusSub.textContent = detail || STATUS_LABEL[status];
+  statusSub.textContent = detail || (status === 'idle' ? 'Abra o Comunic Chat para conectar' : STATUS_LABEL[status]);
   callBtn.disabled = status !== 'registered';
 }
 
@@ -438,60 +441,129 @@ for (const d of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']) {
 }
 
 // ---------- Ajustes ----------
+// Conectividade (backend/PBX) vem do build; aqui só o ramal atual, para o cabeçalho.
 async function loadSettings(): Promise<void> {
-  const s = await chrome.storage.local.get(['pbxURL', 'extension', 'signature', 'backendUrl']);
-  $<HTMLInputElement>('pbx-url').value = s.pbxURL ?? '';
-  $<HTMLInputElement>('extension').value = s.extension ?? '';
-  $<HTMLTextAreaElement>('signature').value = s.signature ?? '';
-  $<HTMLInputElement>('backend-url').value = s.backendUrl ?? '';
+  const s = await chrome.storage.local.get(['extension']);
   extensionNumber = s.extension ?? '';
 }
 
-$<HTMLButtonElement>('integ-btn').addEventListener('click', async () => {
-  const msg = $('settings-msg');
-  const url = $<HTMLInputElement>('backend-url').value.trim();
-  if (!url) { msg.textContent = 'Informe a URL do backend.'; return; }
-  // Padrão de permissão NÃO pode conter porta → usa protocolo + host.
-  let backendPattern: string;
+// ----- Áudio -----
+const audMic = $<HTMLSelectElement>('aud-mic');
+const audSpeaker = $<HTMLSelectElement>('aud-speaker');
+const audRing = $<HTMLSelectElement>('aud-ring');
+const audVol = $<HTMLInputElement>('aud-vol');
+const audVolVal = $('aud-vol-val');
+const audRingOn = $<HTMLInputElement>('aud-ring-on');
+let audioCfg: AudioSettings = { ...DEFAULT_AUDIO };
+
+async function loadAudioCfg(): Promise<void> {
+  const { audio } = await chrome.storage.local.get('audio');
+  audioCfg = { ...DEFAULT_AUDIO, ...(audio ?? {}) };
+}
+/** Grava e o background repassa ao offscreen (vale na hora). */
+function saveAudio(patch: Partial<AudioSettings>): Promise<void> {
+  audioCfg = { ...audioCfg, ...patch };
+  return chrome.storage.local.set({ audio: audioCfg });
+}
+
+function fillSelect(sel: HTMLSelectElement, list: MediaDeviceInfo[], current: string, noun: string): void {
+  sel.innerHTML = '';
+  const add = (value: string, text: string) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+  add('', 'Padrão do sistema');
+  // "default"/"communications" são apelidos do Chrome para o padrão: não repetir.
+  const real = list.filter((d) => d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
+  real.forEach((d, i) => add(d.deviceId, d.label || `${noun} ${i + 1}`));
+  if (current && !real.some((d) => d.deviceId === current)) add(current, 'Desconectado · usando o padrão');
+  sel.value = current;
+}
+
+async function fillDevices(): Promise<void> {
+  let devices: MediaDeviceInfo[] = [];
+  try { devices = await navigator.mediaDevices.enumerateDevices(); } catch { /* */ }
+  // Sem permissão de microfone o Chrome esconde os nomes dos dispositivos.
+  $('mic-perm').hidden = devices.some((d) => d.label);
+  const outputs = devices.filter((d) => d.kind === 'audiooutput');
+  fillSelect(audMic, devices.filter((d) => d.kind === 'audioinput'), audioCfg.micId, 'Microfone');
+  fillSelect(audSpeaker, outputs, audioCfg.speakerId, 'Saída');
+  fillSelect(audRing, outputs, audioCfg.ringId, 'Saída');
+  // Alguns sistemas não expõem saídas (ex.: Linux sem PipeWire): só o padrão.
+  audSpeaker.disabled = audRing.disabled = outputs.length === 0;
+}
+
+function renderAbout(): void {
+  const v = chrome.runtime.getManifest().version;
+  $('about').innerHTML = '';
+  for (const line of [`Comunic.Chat ${v}`, `Build ${BUILD_INFO}`]) {
+    const d = document.createElement('div'); d.textContent = line; $('about').appendChild(d);
+  }
+}
+
+async function openAudioSettings(): Promise<void> {
+  await loadAudioCfg();
+  audVol.value = String(audioCfg.ringVolume);
+  audVolVal.textContent = `${audioCfg.ringVolume}%`;
+  audRingOn.checked = audioCfg.ringEnabled;
+  renderAbout();
+  await fillDevices();
+}
+
+navigator.mediaDevices?.addEventListener?.('devicechange', () => { if (!$('view-settings').hidden) fillDevices(); });
+audMic.addEventListener('change', () => { saveAudio({ micId: audMic.value }); if (micTest) { stopMicTest(); startMicTest(); } });
+audSpeaker.addEventListener('change', () => saveAudio({ speakerId: audSpeaker.value }));
+audRing.addEventListener('change', () => saveAudio({ ringId: audRing.value }));
+audVol.addEventListener('input', () => { audVolVal.textContent = `${audVol.value}%`; });
+audVol.addEventListener('change', () => saveAudio({ ringVolume: Number(audVol.value) }));
+audRingOn.addEventListener('change', () => saveAudio({ ringEnabled: audRingOn.checked }));
+$('test-speaker').addEventListener('click', () => chrome.runtime.sendMessage({ target: 'background', type: 'TEST_SOUND', kind: 'speaker' }));
+$('test-ring').addEventListener('click', async () => {
+  await saveAudio({ ringVolume: Number(audVol.value) }); // testa com o volume que está na tela
+  chrome.runtime.sendMessage({ target: 'background', type: 'TEST_SOUND', kind: 'ring' });
+});
+// O popup não consegue exibir o pedido de permissão: abre a janela da extensão.
+$('mic-perm-btn').addEventListener('click', () => chrome.runtime.sendMessage({ target: 'background', type: 'REQUEST_MIC' }));
+
+// Medidor do microfone (8 s ou até clicar de novo).
+let micTest: { stream: MediaStream; ctx: AudioContext; raf: number; timer: number } | null = null;
+const micLevel = $('mic-level');
+const testMicBtn = $<HTMLButtonElement>('test-mic');
+
+function stopMicTest(): void {
+  if (!micTest) return;
+  cancelAnimationFrame(micTest.raf);
+  clearTimeout(micTest.timer);
+  micTest.stream.getTracks().forEach((t) => t.stop());
+  micTest.ctx.close().catch(() => { /* */ });
+  micTest = null;
+  micLevel.style.width = '0';
+  testMicBtn.textContent = 'Testar microfone';
+}
+
+async function startMicTest(): Promise<void> {
+  let stream: MediaStream;
   try {
-    const u = new URL(url);
-    backendPattern = `${u.protocol}//${u.hostname}/*`;
-  } catch { msg.textContent = 'URL do backend inválida.'; return; }
-  try {
-    // Origem do backend + acesso ao PBX (origem decidida pelo backend).
-    const granted = await chrome.permissions.request({ origins: [backendPattern, 'https://*/*'] });
-    if (!granted) { msg.textContent = 'Permissão negada.'; return; }
-  } catch (e: any) {
-    msg.textContent = 'Erro ao pedir permissão: ' + String(e?.message ?? e);
+    const id = audioCfg.micId;
+    stream = await navigator.mediaDevices.getUserMedia({ audio: id ? { deviceId: { ideal: id } } : true });
+  } catch {
+    $('mic-perm').hidden = false;
     return;
   }
-  await chrome.storage.local.set({ backendUrl: url });
-  msg.textContent = 'Login integrado ativado. Abra o Comunic Chat para registrar o ramal.';
-});
-
-$<HTMLButtonElement>('connect-btn').addEventListener('click', async () => {
-  const config: SdkConfig = {
-    pbxURL: $<HTMLInputElement>('pbx-url').value.trim(),
-    extension: $<HTMLInputElement>('extension').value.trim(),
-    signature: $<HTMLTextAreaElement>('signature').value.trim(),
+  const ctx = new AudioContext();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 512;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Uint8Array(analyser.fftSize);
+  const tick = () => {
+    analyser.getByteTimeDomainData(buf);
+    let peak = 0;
+    for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
+    micLevel.style.width = `${Math.min(100, (peak / 128) * 160)}%`;
+    if (micTest) micTest.raf = requestAnimationFrame(tick);
   };
-  if (!config.pbxURL || !config.extension || !config.signature) {
-    renderStatus('failed', 'Preencha URL, ramal e assinatura.');
-    showView('settings');
-    return;
-  }
-  let origin: string;
-  try { origin = new URL(config.pbxURL).origin + '/*'; }
-  catch { renderStatus('failed', 'URL do PBX inválida.'); return; }
-  const granted = await chrome.permissions.request({ origins: [origin] });
-  if (!granted) { renderStatus('failed', 'Permissão de acesso ao PBX negada.'); return; }
-
-  await chrome.storage.local.set(config);
-  extensionNumber = config.extension;
-  renderStatus('connecting');
-  showView('teclado');
-  chrome.runtime.sendMessage({ target: 'background', type: 'INIT_SDK', config });
-});
+  micTest = { stream, ctx, raf: requestAnimationFrame(tick), timer: setTimeout(stopMicTest, 8000) as unknown as number };
+  testMicBtn.textContent = 'Parar teste';
+  fillDevices(); // com a permissão, os nomes dos dispositivos aparecem
+}
+testMicBtn.addEventListener('click', () => (micTest ? stopMicTest() : startMicTest()));
 
 // ---------- Eventos do background ----------
 chrome.runtime.onMessage.addListener((raw: AnyMessage) => {
@@ -517,6 +589,72 @@ const ctEmail = $<HTMLInputElement>('ct-email');
 const ctMsg = $('ct-msg');
 let ctEditId: string | undefined;
 let ctSearchTimer: number | undefined;
+
+// ----- Ramais da organização (aba Contatos → Ramais) -----
+type ExtItem = { extension: string; name: string; me?: boolean; status?: 'online' | 'offline' };
+const extList = $('ext-list');
+let cMode: 'contatos' | 'ramais' = 'contatos';
+let extItems: ExtItem[] | null = null;
+let extError = '';
+
+function setCMode(mode: 'contatos' | 'ramais'): void {
+  cMode = mode;
+  document.querySelectorAll<HTMLElement>('.ct-mode').forEach((b) => b.classList.toggle('active', b.dataset.cmode === mode));
+  ctList.hidden = mode !== 'contatos';
+  extList.hidden = mode !== 'ramais';
+  $('ct-new').hidden = mode !== 'contatos';
+  closeContactForm();
+  ctSearch.value = '';
+  ctSearch.placeholder = mode === 'ramais' ? 'Buscar nome ou ramal…' : 'Buscar contato…';
+  if (mode === 'ramais') loadExtensions(); else loadContacts();
+}
+document.querySelectorAll<HTMLElement>('.ct-mode').forEach((b) =>
+  b.addEventListener('click', () => setCMode(b.dataset.cmode as 'contatos' | 'ramais')),
+);
+
+async function loadExtensions(): Promise<void> {
+  if (!extItems) extList.innerHTML = '<div class="empty">Carregando ramais…</div>';
+  const resp = (await chrome.runtime.sendMessage({ target: 'background', type: 'DIRECTORY' }).catch(() => null)) as
+    { items?: ExtItem[]; error?: string } | null;
+  if (resp?.items) { extItems = resp.items; extError = ''; }
+  else extError = resp?.error || 'Não consegui carregar os ramais.';
+  renderExtensions();
+}
+
+function renderExtensions(): void {
+  extList.innerHTML = '';
+  const empty = (t: string) => { const d = document.createElement('div'); d.className = 'empty'; d.textContent = t; extList.appendChild(d); };
+  if (!extItems) { empty(extError || 'Carregando ramais…'); return; }
+  const q = norm(ctSearch.value.trim());
+  const list = q ? extItems.filter((e) => norm(e.name).includes(q) || e.extension.includes(q)) : extItems;
+  if (!list.length) { empty(extItems.length ? 'Nenhum ramal encontrado.' : 'Nenhum ramal vinculado na empresa.'); return; }
+  for (const e of list) {
+    const row = document.createElement('div'); row.className = 'ct-row';
+    const av = document.createElement('span'); av.className = 'ext-av'; av.textContent = initial(e.name);
+    if (e.status) {
+      const dot = document.createElement('span');
+      dot.className = `dot ${e.status === 'online' ? 'dot--registered' : 'dot--idle'}`;
+      av.appendChild(dot);
+    }
+    const main = document.createElement('div'); main.className = 'ct-main';
+    const nm = document.createElement('div'); nm.className = 'ct-name'; nm.textContent = e.name;
+    if (e.me) { const you = document.createElement('span'); you.className = 'ct-you'; you.textContent = 'você'; nm.appendChild(you); }
+    const meta = document.createElement('div'); meta.className = 'ct-meta';
+    const st = e.status ? (e.status === 'online' ? ' · Conectado' : ' · Desconectado') : '';
+    meta.innerHTML = '';
+    const num = document.createElement('span'); num.className = 'ext-num'; num.textContent = `Ramal ${e.extension}`;
+    meta.append(num, document.createTextNode(st));
+    main.append(nm, meta);
+    const callB = document.createElement('button'); callB.className = 'hist-call'; callB.innerHTML = PHONE_SVG;
+    if (e.me) { callB.disabled = true; callB.title = 'É o seu ramal'; }
+    else {
+      callB.title = `Ligar para ${e.extension}`;
+      callB.addEventListener('click', () => chrome.runtime.sendMessage({ target: 'background', type: 'CALL', number: e.extension }));
+    }
+    row.append(av, main, callB);
+    extList.appendChild(row);
+  }
+}
 
 function openContactForm(c?: Contact): void {
   ctEditId = c?.id;
@@ -592,6 +730,7 @@ async function loadContacts(): Promise<void> {
 }
 
 ctSearch.addEventListener('input', () => {
+  if (cMode === 'ramais') { renderExtensions(); return; } // filtro local, sem ir ao servidor
   if (ctSearchTimer) clearTimeout(ctSearchTimer);
   ctSearchTimer = setTimeout(() => loadContacts(), 350) as unknown as number;
 });
@@ -623,5 +762,4 @@ $('ct-save').addEventListener('click', async () => {
     | undefined;
   renderStatus(snap?.status ?? 'idle', snap?.detail);
   renderCall(snap?.callState ?? { active: false });
-  if (!extensionNumber) showView('settings');
 })();

@@ -54,11 +54,15 @@
 
       <!-- CONTATOS -->
       <section class="view" id="view-contatos" hidden>
+        <div class="ct-seg">
+          <div class="seg" role="tablist"><button class="seg-btn ct-mode active" data-cmode="contatos">Contatos</button><button class="seg-btn ct-mode" data-cmode="ramais">Ramais</button></div>
+        </div>
         <div class="ct-top">
           <input id="ct-search" class="field" type="text" placeholder="Buscar contato…" autocomplete="off" />
           <button id="ct-new" class="ct-add" title="Novo contato" aria-label="Novo contato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
         <div id="ct-list" class="ct-list"></div>
+        <div id="ext-list" class="ct-list" hidden></div>
         <div id="ct-form" class="ct-form" hidden>
           <div class="ct-form-title" id="ct-form-title">Novo contato</div>
           <input id="ct-name" class="field" placeholder="Nome" autocomplete="off" />
@@ -77,25 +81,39 @@
         <div id="history-list" class="hist-list"></div>
       </section>
 
-      <!-- AJUSTES -->
+      <!-- AJUSTES (só áudio: os endereços do backend/PBX vêm do build) -->
       <section class="view" id="view-settings" hidden>
-        <label class="label" for="backend-url">Login integrado — URL do backend</label>
-        <input id="backend-url" class="field" type="text" inputmode="url" placeholder="http://127.0.0.1:8787" />
-        <button id="integ-btn" class="btn btn--primary">Ativar login integrado</button>
-        <p class="dial-msg" id="settings-msg" style="color:var(--muted);text-align:left;">
-          Com o login integrado, o ramal registra sozinho ao abrir o Comunic Chat.
-        </p>
+        <div class="set-title">Áudio</div>
+        <div id="mic-perm" class="set-note" hidden>
+          Para ver os nomes dos dispositivos, libere o microfone para a extensão.
+          <button id="mic-perm-btn" class="link-btn">Liberar microfone</button>
+        </div>
 
-        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+        <label class="label" for="aud-mic">Microfone</label>
+        <select id="aud-mic" class="field"></select>
+        <div class="set-row set-row--meter">
+          <div class="meter" aria-hidden="true"><div id="mic-level" class="meter-bar"></div></div>
+          <button id="test-mic" class="link-btn">Testar microfone</button>
+        </div>
 
-        <label class="label">Modo manual (sem backend)</label>
-        <label class="label" for="pbx-url">URL do PBX (HTTPS)</label>
-        <input id="pbx-url" class="field" type="url" placeholder="https://pbx.cliente.com.br" />
-        <label class="label" for="extension">Ramal</label>
-        <input id="extension" class="field" type="text" placeholder="201" />
-        <label class="label" for="signature">Assinatura (sign)</label>
-        <textarea id="signature" class="field field--area" rows="3" placeholder="Cole aqui a assinatura gerada pelo gestor"></textarea>
-        <button id="connect-btn" class="btn btn--primary">Salvar e conectar</button>
+        <label class="label" for="aud-speaker">Alto-falante · voz da chamada</label>
+        <div class="set-row">
+          <select id="aud-speaker" class="field"></select>
+          <button id="test-speaker" class="ct-iconbtn" title="Tocar um som de teste" aria-label="Testar alto-falante"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.5.86l11.04-6.86a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z"/></svg></button>
+        </div>
+
+        <label class="label" for="aud-ring">Toque de chamada recebida</label>
+        <div class="set-row">
+          <select id="aud-ring" class="field"></select>
+          <button id="test-ring" class="ct-iconbtn" title="Ouvir o toque" aria-label="Testar toque"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.5.86l11.04-6.86a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z"/></svg></button>
+        </div>
+        <label class="label" for="aud-vol">Volume do toque · <span id="aud-vol-val"></span></label>
+        <input id="aud-vol" class="range" type="range" min="0" max="100" step="5" />
+        <label class="check"><input type="checkbox" id="aud-ring-on" /> Tocar ao receber chamada</label>
+        <p class="set-hint">O microfone novo vale a partir da próxima chamada. Alto-falante e toque mudam na hora.</p>
+
+        <div class="set-title">Sobre</div>
+        <div class="set-about" id="about"></div>
       </section>
 
       <!-- OVERLAY: CHAMADA RECEBIDA -->

@@ -8,12 +8,12 @@ Se um dia o Comunic.SIP for para um host que **já tem** proxy reverso (opção 
 Decisão de 12/11/2026: enquanto não há subdomínio, a VM atende por **`https://177.93.130.128`**.
 - **Certificado:** o Let's Encrypt emite certificado válido para IP desde janeiro/2026, mas só no perfil *shortlived* (validade de ~6 dias). O Caddy renova sozinho, desde que a VM alcance o Let's Encrypt (a porta 80 precisa ficar aberta).
 - **`.env`:** `DOMAIN=177.93.130.128` e `ACME_PROFILE=shortlived`. O `gerar-env.sh` detecta o IP e preenche os dois.
-- **Extensão:** o `manifest.json` lista `https://177.93.130.128/*` em `externally_connectable`, para o painel conversar com a extensão. Em Ajustes, a URL do backend é `https://177.93.130.128`.
+- **Extensão:** gerada com `npm run build:prod`, que já aponta para `https://177.93.130.128` (ver a seção da extensão abaixo).
 - **Menu no Comunic Chat:** `https://177.93.130.128/painel`.
 - **Ao migrar para domínio:**
   1. Troque `DOMAIN` e `ACME_PROFILE=classic` no `.env` e rode `docker compose up -d`.
-  2. Atualize o menu do Comunic Chat e a URL na extensão.
-  3. Tire o IP do `externally_connectable`.
+  2. Atualize o menu do Comunic Chat.
+  3. Gere a extensão com `--backend=https://<domínio>` e troque o `build:prod` no `package.json`.
 
   O banco e os segredos continuam os mesmos.
 
@@ -65,15 +65,23 @@ Decisão de 12/11/2026: enquanto não há subdomínio, a VM atende por **`https:
    Teste a restauração na primeira semana: `./scripts/restaurar.sh --testar backups/<arquivo>`. Copie os backups para fora da VM (snapshot do provedor ou outro storage), sempre longe da `ENCRYPTION_KEY`.
 9. **Extensão:** build de produção conectado ao domínio (próxima seção).
 
-## Extensão em produção: sem tela de Ajustes (fazer junto com o deploy)
-Decisão de 12/11/2026: em produção a extensão já sai **conectada ao backend**, sem configuração pelo usuário. A tela de Ajustes (URL do backend, "Ativar login integrado" e campos manuais de PBX/ramal/assinatura) **sai** do build de produção. Passos:
+## Extensão: endereços definidos no build (feito em 13/11/2026)
+A extensão **não tem tela de conectividade**: os endereços do backend e do PBX entram no build, e a engrenagem abre só os ajustes de **áudio** e o "Sobre" (versão e build).
 
-1. **URL do backend no build:** `npm run build` lê a URL de uma variável (ex.: `BACKEND_URL=https://sip.comunic.chat npm run build`) e o esbuild injeta no código. Sem a variável, o build de dev usa `http://localhost:8787`.
-2. **Manifest de produção:** o domínio do backend entra em `host_permissions` (fixo) em vez de `optional_host_permissions: ["https://*/*"]`; some o pedido de permissão em tempo de execução. `externally_connectable` fica só com o domínio do painel.
-3. **Remover a tela de Ajustes** e os campos manuais do SDK (`pbxURL`, `extension`, `signature` digitados). Tudo vem do backend pelo login integrado. O botão de engrenagem sai (ou vira só "Sobre/versão").
-4. **ID fixo da extensão:** publicar na Chrome Web Store / Edge Add-ons e atualizar o `EXT_ID` padrão em `public/painel.html` (deixa de precisar de `?ext=`).
-5. **Whitelabel:** um build por parceiro com o domínio dele (`BACKEND_URL`, nome e ícones no manifest).
-6. **Testar:** instalar o pacote de produção num perfil limpo do Chrome, abrir o Comunic Chat e confirmar que o ramal registra sem nenhum clique.
+```bash
+cd softphone-extension
+npm run build:prod                                   # backend https://177.93.130.128 + PBX comunic.ras.yeastar.com
+npm run build -- --backend=https://<servidor> --pbx=https://<pbx>   # outro ambiente/parceiro
+```
+
+- **Sem `--backend` o build falha**, de propósito, para que nenhuma extensão saia apontando para lugar nenhum. `--pbx` aceita vários endereços separados por vírgula. Também dá para usar as variáveis `BACKEND_URL` e `PBX_URL`.
+- **Permissões:** o build gera o `dist/manifest.json` com o backend e o PBX em `host_permissions` (fixos, sem pedido de permissão ao usuário) e o backend em `externally_connectable` (ponte com o painel). O `manifest.json` da raiz é só a base.
+- **Ao trocar de endereço** (por exemplo, do IP para um domínio): gere outro build e recarregue/republique a extensão.
+
+**Pendente:**
+1. **ID fixo da extensão:** publicar na Chrome Web Store / Edge Add-ons e atualizar o `EXT_ID` padrão em `public/painel.html` (deixa de precisar de `?ext=`).
+2. **Whitelabel:** um build por parceiro (`--backend` dele, nome e ícones no manifest).
+3. **Testar:** instalar o pacote num perfil limpo do Chrome, abrir o Comunic Chat e confirmar que o ramal registra sem nenhum clique.
 
 ## Pendências antes do primeiro deploy
 - [x] `Dockerfile` com Prisma, `public/` e `scripts/`, usuário sem privilégio e healthcheck.
