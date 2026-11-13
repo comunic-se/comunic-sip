@@ -77,7 +77,7 @@ Cada mensagem leva um `target` (`background`, `offscreen` ou `popup`).
 - `offscreen`, `storage`, `notifications`, `webRequest`, `alarms` (renovação da assinatura), `contextMenus` ("Ligar para…").
 - `content_scripts`: páginas do Comunic Chat, para o click-to-call.
 - `host_permissions`: `api.wts.chat` e `api.flw.chat` (para captar a sessão).
-- `host_permissions`: além do Comunic Chat, o backend e o PBX informados no build (gerados no `dist/manifest.json`). Não há permissão opcional pedida em tempo de execução.
+- `host_permissions`: `*.wts.chat` e `*.flw.chat` (o `webRequest` do login integrado só enxerga a requisição com permissão para a API **e** para a página do Comunic Chat que a fez), mais o backend e o PBX informados no build (gerados no `dist/manifest.json`). Não há permissão opcional pedida em tempo de execução.
 - `externally_connectable`: `localhost`, `127.0.0.1` e `*.comunic.chat` — quem pode pedir sessão à extensão (o painel).
 
 ## Padrão visual

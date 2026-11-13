@@ -7,6 +7,8 @@
 // ou pelas variáveis BACKEND_URL / PBX_URL. --pbx aceita vários, separados por vírgula.
 // O manifest de dist/ sai com esses endereços em host_permissions (sem pedido de
 // permissão ao usuário) e o backend em externally_connectable (ponte com o painel).
+// O manifest base já traz *.wts.chat e *.flw.chat: o webRequest (login integrado) só
+// enxerga a requisição com permissão para a API E para a página do Comunic Chat que a fez.
 import { build, context } from 'esbuild';
 import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
 

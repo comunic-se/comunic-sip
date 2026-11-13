@@ -32,8 +32,8 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "https://api.wts.chat/*",
-    "https://api.flw.chat/*"
+    "https://*.wts.chat/*",
+    "https://*.flw.chat/*"
   ],
   "externally_connectable": {
     "matches": []
