@@ -78,8 +78,18 @@ npm run build -- --backend=https://<servidor> --pbx=https://<pbx>   # outro ambi
 - **Permissões:** o build gera o `dist/manifest.json` com o backend e o PBX em `host_permissions` (fixos, sem pedido de permissão ao usuário) e o backend em `externally_connectable` (ponte com o painel). O `manifest.json` da raiz é só a base.
 - **Ao trocar de endereço** (por exemplo, do IP para um domínio): gere outro build e recarregue/republique a extensão.
 
+### Distribuir para os atendentes
+Todos instalam **a mesma extensão**. Cada pessoa entra com o próprio login do Comunic Chat, e a extensão registra o ramal vinculado a ela.
+
+- **ID fixo:** o `manifest.json` tem a chave pública (`key`), então a extensão tem o ID **`gihpjglehjmbghdfodgoekdpfkigamci`** em qualquer computador, mesmo instalada à mão. É esse o `EXT_ID` padrão do painel (`public/painel.html`), que encontra a extensão sem `?ext=`. A chave privada não foi guardada porque não é necessária para instalar sem compactação.
+- **`npm run pack`:** gera `release/comunic-chat-<versão>.zip` (o build de produção sem os arquivos `*.map`). Para instalar: descompactar → `chrome://extensions` → **Modo do desenvolvedor** → **Carregar sem compactação** → escolher a pasta. Atualizar = substituir os arquivos da pasta e clicar em **Recarregar**.
+- **`npm run pack:store`:** o mesmo pacote **sem a `key`**, porque a Chrome Web Store recusa esse campo. Na loja (de preferência como **Não listada**) a extensão recebe **outro ID**. Depois de publicar:
+  1. troque o `EXT_ID` do painel pelo ID da loja;
+  2. copie a chave pública da loja (aba Pacote) para a `key` do manifest, para que os builds manuais continuem com o mesmo ID.
+- **Versão:** a cada atualização, aumente `version` no `manifest.json`. A loja exige, e o nome do `.zip` acompanha.
+
 **Pendente:**
-1. **ID fixo da extensão:** publicar na Chrome Web Store / Edge Add-ons e atualizar o `EXT_ID` padrão em `public/painel.html` (deixa de precisar de `?ext=`).
+1. **Publicar** na Chrome Web Store / Edge Add-ons (não listada) e alinhar o `EXT_ID` (ver acima).
 2. **Whitelabel:** um build por parceiro (`--backend` dele, nome e ícones no manifest).
 3. **Testar:** instalar o pacote num perfil limpo do Chrome, abrir o Comunic Chat e confirmar que o ramal registra sem nenhum clique.
 

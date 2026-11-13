@@ -14,6 +14,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
   - `scripts/primeiro-acesso.mjs` (PBX e empresa num banco novo, com segredos digitados sem eco e testados no PBX).
 
 ### Alterado
+- **Extensão com ID fixo** (`gihpjglehjmbghdfodgoekdpfkigamci`, pela `key` no manifest) e painel apontando para ele. Novos `npm run pack` (zip para instalação manual) e `npm run pack:store` (zip sem `key` para a loja).
 - **Extensão sem configuração de conectividade:** backend e PBX são definidos no build (`npm run build:prod` ou `--backend`/`--pbx`) e entram como permissões fixas no manifest gerado. Saíram a URL do backend, o "Ativar login integrado" e o modo manual (PBX/ramal/assinatura digitados), além da mensagem `INIT_SDK`.
 - **Segurança para produção:** extensão só entrega sessão à origem exata do backend; limite de requisições (geral e apertado em login, emergência, presença, exportação, sincronizar) com chave por sessão; cabeçalhos de segurança e CSP do painel; backup cifrado do banco com rotação e restauração/teste em banco temporário (`scripts/backup.sh`, `scripts/restaurar.sh`).
 - **Click-to-call no Comunic Chat:** botão "Ligar" ao passar o mouse sobre um telefone (sem alterar o DOM do app) e menu de clique direito "Ligar para…"; reconhecimento de telefones brasileiros com recusa de datas, CPF/CNPJ e valores; só disca com ramal registrado e sem chamada em andamento.

@@ -11,6 +11,8 @@ npm install
 npm run build:prod   # produção: backend https://177.93.130.128 + PBX comunic.ras.yeastar.com
 npm run build -- --backend=http://localhost:8787 --pbx=https://<pbx>   # outro ambiente (dev, parceiro)
 npm run watch -- --backend=http://localhost:8787                        # rebuild automático
+npm run pack         # build:prod + release/comunic-chat-<versão>.zip para instalação manual (ID fixo)
+npm run pack:store   # idem, sem a "key", para enviar à Chrome Web Store / Edge Add-ons
 npm run typecheck    # checagem de tipos (tsc --noEmit)
 ```
 1. `chrome://extensions` → ligar **Modo do desenvolvedor** → **Carregar sem compactação** → selecionar `dist/`.
@@ -88,3 +90,6 @@ Armadilha conhecida: no CSS, uma regra com `display` (grid/flex) anula o atribut
 ## Ícones e marca
 - Ícone da extensão: `assets/icon-{16,32,48,128}.png`, gerados a partir do logo Comunic PABX.
 - Logo Comunic.Chat: `assets/logo-comunic.svg`.
+
+## ID da extensão
+A chave pública em `manifest.json` (`key`) fixa o ID em **`gihpjglehjmbghdfodgoekdpfkigamci`** em qualquer computador. O painel usa esse ID para pedir a sessão à extensão (`EXT_ID` em `comunic-sip-backend/public/painel.html`). Ao publicar na loja, o ID muda; veja `docs/implantacao.md`.

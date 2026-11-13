@@ -3,6 +3,7 @@
   "name": "Comunic.Chat",
   "version": "0.1.0",
   "description": "Softphone do Comunic Chat integrado ao Yeastar P-Series.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0mDftvoWhuCp1yxsoxxZkj+LwGwbEfORVRV0FvwKRsHD35nG4wDCW94eg+aSoYiS0lCFiUqzrlzbYUT+f8OG1JnYDzH3o4jZDq3bPLnbId2OPjYioPEC+qlR0b3e0V1XfPvrc9OpmznnrZU/oQBS0E48dNz9V2zxiTkO3llsmyKJ+ev4O5V7dKk38n4JJRCDk+AhzakkdZdXF+mZ4evqwHhQrnpBy6c2nyzVDg6TXcfMVrDLIGfuEjD9o93y1wAuStAXGRZjUTP+UpR4WngQUN/uDO/7RQieWI1SjXYrFdGksIxcal5JPlDtqrv3aGoCgIymz0TAD7XWfP66vUtgEQIDAQAB",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Comunic.Chat",

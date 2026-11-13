@@ -362,7 +362,8 @@
 
 <script>
 const KEY='comunicsip_session';
-const EXT_ID=new URLSearchParams(location.search).get('ext')||localStorage.getItem('comunicsip_extid')||'ikenlgkhamdnncmdhejkofimcpiedbld';
+// ID fixo da extensão Comunic.Chat (chave "key" do manifest). ?ext= só para testes com outro build.
+const EXT_ID=(/^[a-p]{32}$/.test(new URLSearchParams(location.search).get('ext')||'')&&new URLSearchParams(location.search).get('ext'))||'gihpjglehjmbghdfodgoekdpfkigamci';
 let JWT=null, ROLE=null, PERMS={};
 const can=(p)=>!!PERMS[p];
 const $=(s)=>document.querySelector(s);
