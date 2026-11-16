@@ -5,11 +5,16 @@
 //   Helena "Super Administrador" -> COMPANY_ADMIN  (altera na própria empresa e concede permissões)
 //   Helena "Administrador"       -> COMPANY_VIEWER (só visualiza a empresa)
 //   Helena "Atendente"/"Restrito"-> AGENT          (só o próprio)
-// Ajustes por usuário: tabela permission_grant (escopo = empresa). Cada permissão pode
-// ser LIGADA (allowed=true) ou DESLIGADA (allowed=false) para qualquer usuário,
-// independente do papel; o papel é só o ponto de partida. Auditado; ninguém altera a si mesmo.
-// MASTER (SUPER_ADMIN, e PARTNER_ADMIN no seu parceiro) não pode ser restringido.
-// O próprio usuário sempre vê os PRÓPRIOS dados (escopo 'self' não é negado).
+//
+// Ajustes (tabela access_rule), o MAIS ESPECÍFICO VENCE:
+//   usuário  >  grupo (setor do Comunic Chat)  >  função (perfil do Comunic Chat)  >  papel
+// - Grupo: se a pessoa está em vários setores e algum libera, vale liberado.
+// - Regras de grupo/função não alcançam COMPANY_ADMIN (só o master ajusta um admin, e
+//   individualmente). MASTER (SUPER_ADMIN, e PARTNER_ADMIN no seu parceiro) nunca é restringido.
+// - O próprio usuário sempre vê os PRÓPRIOS dados (escopo 'self' não é negado).
+//
+// Visibilidade (tabela user_visibility): grupos cujos dados a pessoa enxerga. Sem registro,
+// vale o padrão do escopo (setor = os setores dela; empresa = todos).
 import { prisma } from './db.js';
 import type { HelenaIdentity } from './helena.js';
 
@@ -83,24 +88,87 @@ export function can(role: Role, perm: Permission): boolean {
 }
 
 /** Quem está pedindo (o JWT). */
-export interface Caller { role: Role; userId: string; companyId: string; emergency?: boolean }
+export interface Caller { role: Role; userId: string; companyId: string; deptIds?: string[]; profile?: string | null; emergency?: boolean }
+
+/** Chave estável do perfil do Comunic Chat (ex.: "Super Admin" -> SUPERADMIN). */
+export function profileKey(profile?: string | null): string {
+  return (profile ?? '').toUpperCase().replace(/[^A-Z]/g, '') || 'SEMPERFIL';
+}
+
+export type RuleSource = 'master' | 'role' | 'profile' | 'group' | 'user';
+type RuleRow = { subjectType: string; subjectId: string; permission: string; allowed: boolean };
 
 /**
- * Escopo efetivo = o maior entre o do papel e o de uma concessão explícita
- * (concessão vale para a empresa do usuário). Consulta o banco a cada chamada,
- * então revogar uma permissão vale na hora, sem esperar o JWT expirar.
+ * Decide uma permissão a partir das regras já carregadas. Puro (sem banco), para ser
+ * usado tanto no pedido quanto na tela de acessos.
+ */
+export function decide(
+  role: Role, perm: Permission,
+  who: { userId: string; deptIds: string[]; profile?: string | null },
+  rules: RuleRow[], master = false,
+): { scope: DataScope | null; source: RuleSource; ruleOn: boolean | null } {
+  const byRole = permissionScope(role, perm);
+  if (master || byRole === 'all' || byRole === 'partner' || !GRANTABLE.includes(perm)) {
+    return { scope: byRole, source: byRole === 'all' || byRole === 'partner' || master ? 'master' : 'role', ruleOn: null };
+  }
+  const mine = rules.filter((r) => r.permission === perm);
+  const userRule = mine.find((r) => r.subjectType === 'user' && r.subjectId === who.userId);
+  let allowed: boolean | null = null;
+  let source: RuleSource = 'role';
+  if (userRule) { allowed = userRule.allowed; source = 'user'; }
+  else if (role !== 'COMPANY_ADMIN') {
+    const groupRules = mine.filter((r) => r.subjectType === 'group' && who.deptIds.includes(r.subjectId));
+    const profRule = mine.find((r) => r.subjectType === 'profile' && r.subjectId === profileKey(who.profile));
+    if (groupRules.length) { allowed = groupRules.some((r) => r.allowed); source = 'group'; }
+    else if (profRule) { allowed = profRule.allowed; source = 'profile'; }
+  }
+  if (allowed === null) return { scope: byRole, source: 'role', ruleOn: null };
+  if (allowed) return { scope: !byRole || RANK.company > RANK[byRole] ? 'company' : byRole, source, ruleOn: true };
+  // Negado: perde o nível empresa; mantém só os próprios dados ('self') ou do setor, se o papel der.
+  return { scope: byRole === 'self' || byRole === 'department' ? byRole : null, source, ruleOn: false };
+}
+
+/** Regras da empresa que podem afetar esta pessoa (ela, os setores dela, o perfil dela). */
+async function rulesFor(user: Caller): Promise<RuleRow[]> {
+  return prisma.accessRule.findMany({
+    where: {
+      companyId: user.companyId,
+      OR: [
+        { subjectType: 'user', subjectId: user.userId },
+        { subjectType: 'group', subjectId: { in: user.deptIds ?? [] } },
+        { subjectType: 'profile', subjectId: profileKey(user.profile) },
+      ],
+    },
+    select: { subjectType: true, subjectId: true, permission: true, allowed: true },
+  });
+}
+
+/**
+ * Escopo efetivo de uma permissão. Consulta o banco a cada chamada, então qualquer
+ * ajuste vale na hora, sem esperar o JWT expirar.
  */
 export async function effectiveScope(user: Caller, perm: Permission): Promise<DataScope | null> {
   const byRole = permissionScope(user.role, perm);
-  // Master não é restringido; emergência é master.
   if (byRole === 'all' || byRole === 'partner' || user.emergency || !GRANTABLE.includes(perm)) return byRole;
-  const g = await prisma.permissionGrant.findUnique({
-    where: { companyId_helenaUserId_permission: { companyId: user.companyId, helenaUserId: user.userId, permission: perm } },
+  return decide(user.role, perm, { userId: user.userId, deptIds: user.deptIds ?? [], profile: user.profile }, await rulesFor(user)).scope;
+}
+
+/**
+ * Grupos cujos dados a pessoa enxerga, dado o escopo efetivo da permissão:
+ *   null      -> sem recorte por grupo (empresa inteira, parceiro, tudo)
+ *   string[]  -> só esses setores (+ sempre os próprios dados)
+ *   'self'    -> só os próprios dados
+ * A visibilidade ajustada (user_visibility) substitui o padrão para quem não é master.
+ */
+export async function visibleGroups(user: Caller, scope: DataScope): Promise<string[] | null | 'self'> {
+  if (scope === 'all' || scope === 'partner' || user.emergency) return null;
+  const v = await prisma.userVisibility.findUnique({
+    where: { companyId_helenaUserId: { companyId: user.companyId, helenaUserId: user.userId } },
   });
-  if (!g) return byRole;
-  if (g.allowed) return !byRole || RANK.company > RANK[byRole] ? 'company' : byRole;
-  // Negado: perde o nível empresa; mantém só os próprios dados ('self') ou do setor, se o papel der.
-  return byRole === 'self' || byRole === 'department' ? byRole : null;
+  if (v) return v.departmentIds;
+  if (scope === 'company') return null;
+  if (scope === 'department') return user.deptIds ?? [];
+  return 'self';
 }
 
 /** Mapa permissão -> escopo efetivo (para o painel esconder o que não pode). */

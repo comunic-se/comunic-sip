@@ -1,25 +1,31 @@
-// Chamadas (CDR) e Dashboard do painel. Tudo filtrado pelo escopo do usuário:
+// Chamadas (CDR), gravações e Dashboard do painel. Tudo filtrado pelo escopo do usuário:
 //   all      -> todas (inclusive chamadas sem empresa identificada)
 //   partner  -> empresas do parceiro
 //   company  -> a própria empresa
 //   department -> chamadas dos atendentes dos meus setores
+//   (grupos visíveis ajustados por pessoa substituem o padrão de company/department/self)
 //   self     -> só as minhas (dono ou outra ponta de chamada interna)
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { prisma } from './db.js';
 import { requireAuth, type PanelToken } from './auth.js';
-import { effectiveScope, type Permission } from './rbac.js';
+import { effectiveScope, visibleGroups, type Permission } from './rbac.js';
 import { listAgentsCached } from './helena-admin.js';
 import { syncPbx } from './cdr-sync.js';
 import { decryptSecret } from './crypto.js';
 import { getToken, openapiGet, type PbxCreds } from './yeastar.js';
 import { Readable } from 'node:stream';
 import { LIMITS } from './rate-limit.js';
+import { ZipWriter } from './zip.js';
 
 const TZ = process.env.PBX_TIMEZONE_OFFSET ?? '-03:00';
 const TZ_MIN = (() => { const m = TZ.match(/^([+-])(\d{2}):(\d{2})$/); return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : -180; })();
 const MAX_ROWS = 50_000;
 
-type Q = { from?: string; to?: string; type?: string; status?: string; q?: string; userId?: string; companyId?: string; page?: string; pageSize?: string };
+type Q = {
+  from?: string; to?: string; type?: string; status?: string; q?: string; userId?: string; companyId?: string;
+  /** setor (departmentId do Comunic Chat) */ group?: string; /** '1' = só com gravação */ rec?: string;
+  page?: string; pageSize?: string;
+};
 
 /** Data local (YYYY-MM-DD) no fuso do PBX -> instante. */
 function day(d: string | undefined, end: boolean): Date | null {
@@ -52,16 +58,22 @@ async function scopedWhere(user: PanelToken, perm: Permission, q: Q): Promise<{ 
   } else {
     if (q.companyId && q.companyId !== user.companyId) return null;
     and.push({ companyId: user.companyId });
-    if (scope === 'self') {
+    const vis = await visibleGroups(user, scope);
+    if (vis === 'self') {
       and.push({ OR: [{ helenaUserId: user.userId }, { otherUserId: user.userId }] });
-    } else if (scope === 'department') {
-      const company = await prisma.company.findUnique({ where: { id: user.companyId } });
-      const agents = company?.helenaApiTokenEnc ? await listAgentsCached(company.id, company.helenaApiTokenEnc).catch(() => []) : [];
-      const ids = agents.filter((a) => a.departments.some((d) => user.deptIds.includes(d.departmentId))).map((a) => a.userId);
-      ids.push(user.userId);
+    } else if (Array.isArray(vis)) {
+      const ids = await agentsIn(user.companyId, vis);
+      ids.push(user.userId); // os próprios dados sempre
       and.push({ OR: [{ helenaUserId: { in: ids } }, { otherUserId: { in: ids } }] });
     }
   }
+
+  // Filtro da tela: um setor específico (dentro do que a pessoa já pode ver).
+  if (q.group) {
+    const ids = await agentsIn(companyId ?? user.companyId, [q.group]);
+    and.push({ OR: [{ helenaUserId: { in: ids } }, { otherUserId: { in: ids } }] });
+  }
+  if (q.rec === '1') and.push({ recordingId: { not: null } });
 
   const from = day(q.from, false), to = day(q.to, true);
   if (from || to) and.push({ startedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } });
@@ -75,6 +87,14 @@ async function scopedWhere(user: PanelToken, perm: Permission, q: Q): Promise<{ 
     and.push({ OR: [{ fromNumber: like }, { toNumber: like }, { fromName: like }, { toName: like }] });
   }
   return { where: { AND: and }, companyId };
+}
+
+/** Atendentes (userId) que pertencem a algum destes setores. */
+async function agentsIn(companyId: string, deptIds: string[]): Promise<string[]> {
+  if (!deptIds.length) return [];
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  const agents = company?.helenaApiTokenEnc ? await listAgentsCached(company.id, company.helenaApiTokenEnc).catch(() => []) : [];
+  return agents.filter((a) => a.departments.some((d) => deptIds.includes(d.departmentId))).map((a) => a.userId);
 }
 
 async function nameMap(companyId: string | null): Promise<Map<string, string>> {
@@ -97,44 +117,22 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
     if (!sw) return reply.code(403).send({ error: 'fora do seu escopo' });
     const pageSize = Math.min(100, Math.max(10, Number(q.pageSize) || 50));
     const page = Math.max(1, Number(q.page) || 1);
-    const [total, rows, names] = await Promise.all([
+    const [total, rows, names, canPlay, canDownload] = await Promise.all([
       prisma.call.count({ where: sw.where }),
       prisma.call.findMany({ where: sw.where, orderBy: { startedAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
       nameMap(sw.companyId),
+      effectiveScope(user, 'play_recording'),
+      effectiveScope(user, 'download_recording'),
     ]);
     return {
       total, page, pageSize,
+      canPlay: Boolean(canPlay), canDownload: Boolean(canDownload),
       items: rows.map((c) => ({
         id: c.id, startedAt: c.startedAt, direction: c.direction, status: c.status,
         fromNumber: c.fromNumber, fromName: c.fromName, toNumber: c.toNumber, toName: c.toName,
         extension: c.extensionNumber, agent: c.helenaUserId ? names.get(c.helenaUserId) ?? null : null,
         talk: c.talkDuration, ring: c.ringDuration, did: c.did, trunk: c.trunk,
-        hasRecording: c.recordingId != null,
-      })),
-    };
-  });
-
-  // ---- Gravações: lista (só chamadas com gravação, no escopo de play_recording) ----
-  app.get('/v1/panel/recordings', { preHandler: requireAuth('play_recording') }, async (req, reply) => {
-    const user = req.user as PanelToken;
-    const q = req.query as Q;
-    const sw = await scopedWhere(user, 'play_recording', q);
-    if (!sw) return reply.code(403).send({ error: 'fora do seu escopo' });
-    const where = { AND: [sw.where, { recordingId: { not: null } }] };
-    const pageSize = Math.min(100, Math.max(10, Number(q.pageSize) || 50));
-    const page = Math.max(1, Number(q.page) || 1);
-    const [total, rows, names] = await Promise.all([
-      prisma.call.count({ where }),
-      prisma.call.findMany({ where, orderBy: { startedAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
-      nameMap(sw.companyId),
-    ]);
-    return {
-      total, page, pageSize,
-      canDownload: Boolean(await effectiveScope(user, 'download_recording')),
-      items: rows.map((c) => ({
-        id: c.id, startedAt: c.startedAt, direction: c.direction, status: c.status,
-        fromNumber: c.fromNumber, fromName: c.fromName, toNumber: c.toNumber, toName: c.toName,
-        agent: c.helenaUserId ? names.get(c.helenaUserId) ?? null : null, talk: c.talkDuration, size: c.recordingSize,
+        hasRecording: c.recordingId != null, recordingSize: c.recordingSize,
       })),
     };
   });
@@ -156,30 +154,74 @@ export async function registerCallRoutes(app: FastifyInstance): Promise<void> {
     if (!sw || !(await prisma.call.count({ where: { AND: [sw.where, { id }] } }))) {
       return reply.code(403).send({ error: 'fora do seu escopo' });
     }
-    const pbx = await prisma.pbx.findUnique({ where: { id: call.pbxId } });
-    if (!pbx?.clientIdEnc || !pbx.clientSecretEnc) return reply.code(400).send({ error: 'API do PBX não configurada' });
-    const creds: PbxCreds = { baseUrl: pbx.baseUrl, accessId: decryptSecret(pbx.clientIdEnc), accessKey: decryptSecret(pbx.clientSecretEnc) };
-
     let upstream: Response;
     try {
-      const url = await downloadUrl(creds, call.recordingId);
-      upstream = await fetch(`${pbx.baseUrl}${url}?access_token=${encodeURIComponent(await getToken(creds))}`, { headers: { 'User-Agent': 'Comunic.SIP-backend/0.1' } });
-      if (!upstream.ok || !upstream.body) { dlCache.delete(call.recordingId); throw new Error(`HTTP ${upstream.status}`); }
+      upstream = await fetchFromPbx(call);
     } catch (e: any) {
+      if (e?.code === 400) return reply.code(400).send({ error: e.msg });
       req.log.warn({ err: String(e?.message ?? e), callId: id }, 'falha ao buscar gravação no PBX');
       return reply.code(502).send({ error: 'não consegui obter a gravação no PBX' });
     }
 
     await auditRecording(user, call.companyId, id, download);
-    const ext = (call.recordingFile?.match(/\.(wav|mp3)$/i)?.[1] ?? 'wav').toLowerCase();
-    const when = call.startedAt ? new Date(+call.startedAt + TZ_MIN * 60_000).toISOString().slice(0, 16).replace(/[-:T]/g, '') : 'sem-data';
-    const name = `gravacao-${when}-${(call.fromNumber ?? '').replace(/\D/g, '')}-${(call.toNumber ?? '').replace(/\D/g, '')}.${ext}`;
+    const { name, ext } = recordingName(call);
     reply.header('Content-Type', upstream.headers.get('content-type') ?? (ext === 'mp3' ? 'audio/mpeg' : 'audio/wav'));
     const len = upstream.headers.get('content-length');
     if (len) reply.header('Content-Length', len);
     reply.header('Cache-Control', 'no-store');
     reply.header('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${name}"`);
     return reply.send(Readable.fromWeb(upstream.body as any));
+  });
+
+  // ---- Gravações selecionadas em ZIP ----
+  // Exige baixar gravações; cada chamada é conferida no escopo de download_recording.
+  // As gravações vêm do PBX uma a uma e vão direto para o ZIP (nada fica em disco).
+  // Se alguma falhar, o ZIP sai com as demais e um LEIA-ME.txt dizendo quais faltaram.
+  app.post('/v1/panel/recordings/zip', { preHandler: requireAuth('download_recording'), config: LIMITS.export }, async (req, reply) => {
+    const user = req.user as PanelToken;
+    const ids = Array.isArray((req.body as any)?.ids) ? [...new Set(((req.body as any).ids as unknown[]).map(String))] : [];
+    if (!ids.length) return reply.code(400).send({ error: 'selecione ao menos uma gravação' });
+    if (ids.length > ZIP_MAX_FILES) return reply.code(400).send({ error: `selecione no máximo ${ZIP_MAX_FILES} gravações por vez` });
+
+    const calls = await prisma.call.findMany({ where: { id: { in: ids }, recordingId: { not: null } } });
+    const allowed: typeof calls = [];
+    for (const c of calls) {
+      const sw = await scopedWhere(user, 'download_recording', { companyId: c.companyId ?? '*' });
+      if (sw && (await prisma.call.count({ where: { AND: [sw.where, { id: c.id }] } }))) allowed.push(c);
+    }
+    if (!allowed.length) return reply.code(403).send({ error: 'nenhuma das gravações está no seu escopo' });
+    const total = allowed.reduce((s, c) => s + (c.recordingSize ?? 0), 0);
+    if (total > ZIP_MAX_BYTES) return reply.code(400).send({ error: 'seleção grande demais (máx. 1 GB); divida em partes' });
+
+    allowed.sort((a, b) => +(a.startedAt ?? 0) - +(b.startedAt ?? 0));
+    await prisma.auditLog.create({
+      data: { companyId: allowed[0].companyId, actor: user.userId, action: 'recording_download_zip', payload: { callIds: allowed.map((c) => c.id) } },
+    });
+
+    const zip = new ZipWriter();
+    const stamp = new Date(Date.now() + TZ_MIN * 60_000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    reply.header('Content-Type', 'application/zip');
+    reply.header('Cache-Control', 'no-store');
+    reply.header('Content-Disposition', `attachment; filename="gravacoes-${stamp}.zip"`);
+    reply.send(zip.stream);
+
+    const failed: string[] = [];
+    for (const c of allowed) {
+      try {
+        const res = await fetchFromPbx(c);
+        const data = new Uint8Array(await res.arrayBuffer());
+        await zip.add(recordingName(c).name, data, c.startedAt ? new Date(+c.startedAt + TZ_MIN * 60_000 + new Date().getTimezoneOffset() * 60_000) : new Date());
+      } catch (e: any) {
+        req.log.warn({ err: String(e?.message ?? e ?? ''), callId: c.id }, 'zip: falha ao buscar gravação');
+        failed.push(recordingName(c).name);
+      }
+    }
+    if (failed.length) {
+      const txt = 'Estas gravações não puderam ser obtidas no PBX e ficaram de fora:\r\n\r\n' + failed.join('\r\n') + '\r\n';
+      await zip.add('LEIA-ME.txt', Buffer.from(txt, 'utf8'));
+    }
+    await zip.finish();
+    return reply;
   });
 
   // ---- Exportar (CSV) ----
@@ -302,4 +344,28 @@ async function auditRecording(user: PanelToken, companyId: string | null, callId
   await prisma.auditLog.create({
     data: { companyId, actor: user.userId, action: download ? 'recording_download' : 'recording_play', payload: { callId } },
   });
+}
+
+const ZIP_MAX_FILES = 200;
+const ZIP_MAX_BYTES = 1024 * 1024 * 1024; // 1 GB
+
+type CallRow = { pbxId: string | null; recordingId: number | null; recordingFile: string | null; startedAt: Date | null; fromNumber: string | null; toNumber: string | null };
+
+/** Nome do arquivo: gravacao-AAAAMMDDHHMM-<de>-<para>.<ext> (hora local do PBX). */
+function recordingName(call: CallRow): { name: string; ext: string } {
+  const ext = (call.recordingFile?.match(/\.(wav|mp3)$/i)?.[1] ?? 'wav').toLowerCase();
+  const when = call.startedAt ? new Date(+call.startedAt + TZ_MIN * 60_000).toISOString().slice(0, 16).replace(/[-:T]/g, '') : 'sem-data';
+  return { ext, name: `gravacao-${when}-${(call.fromNumber ?? '').replace(/\D/g, '')}-${(call.toNumber ?? '').replace(/\D/g, '')}.${ext}` };
+}
+
+/** Busca o áudio no PBX (proxy). Lança { code: 400 } se a API do PBX não estiver configurada. */
+async function fetchFromPbx(call: CallRow): Promise<Response> {
+  if (call.recordingId == null || !call.pbxId) throw new Error('chamada sem gravação');
+  const pbx = await prisma.pbx.findUnique({ where: { id: call.pbxId } });
+  if (!pbx?.clientIdEnc || !pbx.clientSecretEnc) throw { code: 400, msg: 'API do PBX não configurada' };
+  const creds: PbxCreds = { baseUrl: pbx.baseUrl, accessId: decryptSecret(pbx.clientIdEnc), accessKey: decryptSecret(pbx.clientSecretEnc) };
+  const url = await downloadUrl(creds, call.recordingId);
+  const res = await fetch(`${pbx.baseUrl}${url}?access_token=${encodeURIComponent(await getToken(creds))}`, { headers: { 'User-Agent': 'Comunic.SIP-backend/0.1' } });
+  if (!res.ok || !res.body) { dlCache.delete(call.recordingId); throw new Error(`HTTP ${res.status}`); }
+  return res;
 }

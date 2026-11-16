@@ -5,6 +5,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Painel: Chamadas com gravações.** A tela Gravações saiu; em Chamadas cada linha com gravação tem **Ouvir** e **Baixar**, e dá para marcar várias (a seleção vale entre páginas) e **baixar em ZIP** (até 200 por vez, montado em fluxo, auditado como `recording_download_zip`). Novo filtro "Só com gravação".
+- **Painel: filtros por grupo** (setores do Comunic Chat) em Chamadas, Dashboard e Ramais, e por atendente em Chamadas e Dashboard; em Ramais também por função e status. Nova rota `GET /v1/panel/groups`.
+- **Painel: acessos por usuário, grupo e função** (o mais específico vence: usuário > grupo > função > papel) e **grupos visíveis por pessoa**. Tudo na tela Ramais: abas Usuários | Grupos | Funções; em "Configurar", a pessoa recebe ramal (lista dos livres da faixa), acessos e grupos visíveis. A tela Acessos saiu. Migration `20261116150000_access_rules` (os ajustes por pessoa existentes viram regras de usuário; `permission_grant` é removida).
 - **Extensão: ENTER liga.** Digitou o número no teclado, Enter disca (com o foco no campo ou numa tecla). Sem ramal conectado, avisa em vez de discar.
 - **Extensão: visual do Comunic Chat** (medido em comunic.flw.chat): cabeçalho branco com o logo e pílula de status ("Ramal 201 · Disponível"), faixa azul de aviso no padrão "Ative as notificações na web" para desconexão/falha, área cinza `#f1f5f9`, abas com destaque cinza no item ativo, segmentos como "Novos/Meus", campos contornados de 6px e botões pílula.
 - **Extensão: ajustes de áudio.** A engrenagem permite escolher o microfone (vale na próxima chamada), o alto-falante da voz da chamada e o dispositivo do toque (esses dois mudam na hora). Também dá para ajustar o volume do toque, ligar ou desligar o toque, testar o som e medir o nível do microfone. Se um dispositivo é desconectado, a extensão volta sozinha ao padrão do sistema.

@@ -194,17 +194,36 @@ model EmergencyAdmin {
   @@map("emergency_admin")
 }
 
-// Ajuste de permissão por usuário dentro da empresa: concede (allowed=true) ou
-// nega (allowed=false) algo além/aquém do padrão do papel. Auditado.
-model PermissionGrant {
-  companyId    String   @map("company_id")
-  helenaUserId String   @map("helena_user_id")
-  permission   String
-  // true = concedida além do papel; false = negada (tira algo que o papel daria)
-  allowed      Boolean  @default(true)
-  grantedBy    String   @map("granted_by")
-  createdAt    DateTime @default(now()) @map("created_at")
+// Regras de acesso dentro da empresa. Precedência (o mais específico vence):
+//   usuário  >  grupo (setor do Comunic Chat)  >  função (perfil do Comunic Chat)  >  papel
+// allowed=true liga a permissão; false desliga. Sem regra = herda do nível de cima.
+// Regras de grupo/função não alcançam master nem administrador da empresa
+// (esses só mudam individualmente, pelo master). Tudo auditado.
+model AccessRule {
+  companyId   String   @map("company_id")
+  // 'user' | 'group' | 'profile'
+  subjectType String   @map("subject_type")
+  // helenaUserId | departmentId | chave do perfil (ex.: AGENT, RESTRICTEDAGENT)
+  subjectId   String   @map("subject_id")
+  permission  String
+  allowed     Boolean
+  updatedBy   String   @map("updated_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
-  @@id([companyId, helenaUserId, permission])
-  @@map("permission_grant")
+  @@id([companyId, subjectType, subjectId, permission])
+  @@index([companyId, subjectType])
+  @@map("access_rule")
+}
+
+// Grupos (setores) cujos dados a pessoa enxerga em Chamadas, Gravações e Dashboard.
+// Sem registro = padrão (os setores dela no Comunic Chat; admin vê a empresa).
+model UserVisibility {
+  companyId     String   @map("company_id")
+  helenaUserId  String   @map("helena_user_id")
+  departmentIds String[] @map("department_ids")
+  updatedBy     String   @map("updated_by")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([companyId, helenaUserId])
+  @@map("user_visibility")
 }

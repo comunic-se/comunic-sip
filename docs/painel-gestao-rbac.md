@@ -65,13 +65,19 @@ Escopos: `all` > `partner` > `company` > `department` > `self`. "—" = sem aces
 
 Fonte de verdade: `MATRIX` em `src/rbac.ts`.
 
-## Granulação por usuário (módulo Acessos)
-**Todo usuário tem um interruptor para cada permissão**, independente do papel. O papel é só o **ponto de partida**:
+## Granulação: usuário, grupo e função (tela Ramais)
+Fica na tela **Ramais**, em abas: **Usuários** (ramal + acessos + grupos visíveis de cada pessoa, no botão "Configurar"), **Grupos** e **Funções**. Grupos = setores do Comunic Chat; funções = perfis do Comunic Chat (Atendente, Atendente restrito, Administrador…). Tudo vem do Comunic Chat; nada é cadastrado à mão.
 
-- Ligar o que o papel não dá = **concedida** (ex.: um Atendente que pode alterar ramais).
-- Desligar o que o papel daria = **retirada** (ex.: um Administrador que não vê chamadas).
-- Voltar ao padrão do papel apaga o ajuste (a pessoa volta a seguir o papel; se o perfil dela mudar no Comunic Chat, recebe o novo padrão).
-- Ponto azul no interruptor = ajustado em relação ao padrão.
+Cada permissão pode ser **Ligada**, **Desligada** ou **Herda**. Vale a regra **mais específica** (tabela `access_rule`):
+
+`usuário  >  grupo  >  função  >  papel`
+
+- Ex.: Suporte pode baixar gravações (regra do grupo), mas o João (do Suporte) teve isso desligado (regra individual) → João não baixa.
+- Pessoa em **vários grupos**: se algum grupo libera, fica liberado.
+- Regras de grupo e de função **não alcançam administradores da empresa** (só o master muda um admin, e individualmente). A aba Funções mostra a função de administrador travada.
+- Na pessoa, "Herda: ligado (regra do grupo)" mostra o que vale sem o ajuste individual.
+
+**Grupos visíveis** (tabela `user_visibility`): de quais grupos a pessoa vê chamadas, gravações e dashboard. Padrão = os grupos dela no Comunic Chat (setor) ou a empresa toda (quem tem escopo empresa). Ajustado, substitui o padrão (ex.: supervisora do Comercial vê Comercial + Financeiro). As próprias chamadas aparecem sempre.
 
 Permissões ajustáveis: ver ramais, alterar ramais, dashboard, chamadas, exportar, ouvir gravações, baixar gravações e **conceder acessos** — todas com escopo da empresa.
 
@@ -79,20 +85,21 @@ Regras de segurança:
 | Regra | Por quê |
 |---|---|
 | **Master** (SUPER_ADMIN; PARTNER_ADMIN no seu parceiro; acesso de emergência) tem tudo e **não pode ser restringido** | É o dono da plataforma e a saída de emergência |
-| **Ninguém altera as próprias permissões** | Sem autoelevação |
-| "Conceder acessos" e mudanças em **outro admin da empresa** só pelo master | Um admin não pode criar outros admins nem rebaixar colegas |
-| Cada pessoa **sempre vê os próprios** dados (ramal, chamadas, gravações) | Retirar "Chamadas" tira a visão da empresa, não a do próprio histórico |
-| Mudanças valem **na hora** (o backend consulta `permission_grant` a cada pedido) | Revogar não espera a sessão expirar |
-| Tudo no `audit_log` (`permission_grant` / `permission_revoke`, com quem fez, alvo e papel) | Responsabilidade e rastreio |
+| **Ninguém altera os próprios acessos** nem a própria visibilidade | Sem autoelevação |
+| "Conceder acessos" (em qualquer nível) e mudanças em **outro admin da empresa** só pelo master | Um admin não pode criar outros admins nem rebaixar colegas |
+| Cada pessoa **sempre vê os próprios** dados (ramal, chamadas, gravações) | Desligar "Chamadas" tira a visão da empresa, não a do próprio histórico |
+| Mudanças valem **na hora** (o backend consulta `access_rule` e `user_visibility` a cada pedido) | Revogar não espera a sessão expirar |
+| Tudo no `audit_log` (`access_rule_allow/deny/inherit`, `access_visibility`) | Responsabilidade e rastreio |
+
+Mudança de perfil ou de setor no Comunic Chat vale no próximo login da pessoa (sessão de até 12 h).
 
 ## Módulos
 | Módulo | Permissão | Estado |
 |---|---|---|
 | Ramais (ver: `view_extensions`; vincular/desvincular: `manage_extensions`) | `view_extensions` / `manage_extensions` | **pronto** — sem `manage_extensions` a tela fica "Somente visualização" |
-| Acessos (interruptor por pessoa e permissão) | `manage_access` | **pronto** |
-| Dashboard (indicadores, por dia/hora, por atendente) | `view_dashboard` | **pronto** — períodos Hoje / 7 / 30 dias |
-| Chamadas (lista com filtros; exportar CSV com `export_cdr`) | `view_cdr` / `export_cdr` | **pronto** |
-| Gravações (ouvir no player; baixar com `download_recording`) | `play_recording` / `download_recording` | **pronto** — também há botão de ouvir na lista de Chamadas |
+| Acessos (por usuário, grupo e função + grupos visíveis) — dentro de Ramais | `manage_access` | **pronto** — abas Grupos/Funções e o "Configurar" de cada pessoa só para quem concede acessos |
+| Dashboard (indicadores, por dia/hora, por atendente) | `view_dashboard` | **pronto** — períodos Hoje / 7 / 30 dias; filtros por grupo e atendente |
+| Chamadas com gravações (filtros por período, tipo, status, grupo, atendente e "só com gravação"; ouvir; baixar uma; marcar várias e baixar em ZIP; exportar CSV) | `view_cdr` / `play_recording` / `download_recording` / `export_cdr` | **pronto** — a antiga tela Gravações foi absorvida |
 | Empresas (cadastro, PBX, faixas, token, ativar/desativar) | `provision_company` / `manage_pbx` | **pronto** — só aparece para SUPER/PARTNER; aba PBX só para SUPER |
 
 ## Regras do módulo Empresas

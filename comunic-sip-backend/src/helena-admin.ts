@@ -139,3 +139,23 @@ export async function listAgentsCached(companyId: string, tokenEnc: string, fres
   agentCache.set(companyId, { at: Date.now(), agents });
   return agents;
 }
+
+// ---------- Grupos (setores/equipes do Comunic Chat) ----------
+export interface HelenaDepartment { id: string; name: string }
+const deptCache = new Map<string, { at: number; items: HelenaDepartment[] }>();
+
+/** Setores da empresa (GET /core/v2/department), com cache curto. */
+export async function listDepartmentsCached(companyId: string, tokenEnc: string, fresh = false): Promise<HelenaDepartment[]> {
+  const hit = deptCache.get(companyId);
+  if (!fresh && hit && Date.now() - hit.at < AGENTS_TTL_MS) return hit.items;
+  const res = await hfetch(`${config.helenaBase}/core/v2/department`, { headers: authHeaders(decryptSecret(tokenEnc)) });
+  if (!res.ok) throw new Error(`GET /v2/department falhou (HTTP ${res.status})`);
+  const j: any = await res.json().catch(() => null);
+  const raw: any[] = Array.isArray(j) ? j : j?.items ?? [];
+  const items = raw
+    .filter((d) => d?.id)
+    .map((d) => ({ id: String(d.id), name: String(d.name ?? 'Sem nome') }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  deptCache.set(companyId, { at: Date.now(), items });
+  return items;
+}

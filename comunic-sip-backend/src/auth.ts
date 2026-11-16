@@ -12,6 +12,8 @@ export interface PanelToken {
   partnerId?: string | null;
   role: Scope['role'];
   deptIds: string[];
+  /** Perfil no Comunic Chat (regras por função). Mudança vale no próximo login. */
+  profile?: string | null;
   /** Sessão do acesso de emergência (senha + TOTP). */
   emergency?: boolean;
 }
@@ -49,6 +51,7 @@ export async function openSession(
     partnerId: scope.partnerId ?? null,
     role: scope.role,
     deptIds: scope.departmentIds,
+    profile: id.profile ?? null,
   });
   return { scope, company, identity: id, token };
 }

@@ -159,6 +159,31 @@
   .acc-legend i{display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--blue);margin-right:5px;vertical-align:middle}
   .switch.sm .trk{width:32px;height:18px} .switch.sm .trk::after{width:12px;height:12px} .switch.sm input:checked+.trk::after{left:17px}
   .switch input:disabled+.trk{opacity:.45;cursor:not-allowed}
+  /* SELEÇÃO / ACESSOS POR NÍVEL */
+  .chk{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;vertical-align:middle}
+  .chk:disabled{cursor:not-allowed;opacity:.35}
+  th.sel,td.sel{width:38px;padding-right:0}
+  .selbar{display:flex;align-items:center;gap:10px;background:var(--blue-softer);border:1px solid var(--blue-soft);color:var(--blue-dark);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px;font-weight:600}
+  .selbar .btn{padding:7px 14px;font-size:13px}
+  .tri{height:32px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font:inherit;font-size:12.5px;color:var(--body);background:#fff;min-width:120px}
+  .tri.on{border-color:#86efac;background:var(--green-soft);color:#15803d;font-weight:600}
+  .tri.off{border-color:#fecaca;background:var(--red-soft);color:var(--red);font-weight:600}
+  .tri:disabled{opacity:.5;cursor:not-allowed}
+  td.perm .tri{min-width:0;width:96px;padding:0 4px}
+  .act.custom{position:relative} .act.custom::after{content:"";position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--blue);border:2px solid #fff}
+  .acc-list{display:grid;gap:2px}
+  .acc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .acc-row:last-child{border-bottom:none}
+  .acc-row .nm{font-weight:600;color:var(--ink);font-size:13px}
+  .acc-row .inh{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .m-sec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-top:4px}
+  .gchips{display:flex;flex-wrap:wrap;gap:4px}
+  .gchip{display:inline-block;background:var(--line);color:var(--body);border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .vis-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px}
+  .vis-grid label{display:flex;align-items:center;gap:8px;font-size:13px}
+  .radio-row{display:flex;gap:16px;font-size:13px} .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  dialog.modal.wide{width:min(640px,calc(100vw - 32px))}
+  .note-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted)}
   .readonly-note{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--line);border-radius:999px;padding:3px 10px;margin-left:8px;vertical-align:middle}
 </style>
 </head>
@@ -192,9 +217,7 @@
           <button class="nav-item active" data-view="ramais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>Ramais</button>
           <button class="nav-item" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>Dashboard</button>
           <button class="nav-item" data-view="chamadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6h4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Chamadas</button>
-          <button class="nav-item" data-view="gravacoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/></svg>Gravações</button>
           <button class="nav-item" data-view="empresas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>Empresas</button>
-          <button class="nav-item" data-view="acessos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>Acessos</button>
         </nav>
       </aside>
 
@@ -203,17 +226,31 @@
           <span><b>Sessão de emergência</b> · SUPER_ADMIN · expira em 1 h</span>
           <a class="link" id="emg-out">Sair</a>
         </div>
-        <!-- RAMAIS -->
+        <!-- RAMAIS (ramal + acessos por usuário, grupo e função) -->
         <section class="view" data-view="ramais">
-          <div class="page-head"><div><h1 class="page-title">Ramais</h1><div class="page-sub" id="ram-sub">Vínculo de usuários a ramais</div></div></div>
-          <div class="toolbar">
-            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="ram-search" placeholder="Buscar usuário…" autocomplete="off" /></div>
-            <div class="spacer"></div>
-            <span class="muted" id="ram-ranges" style="font-size:12.5px"></span>
+          <div class="page-head"><div><h1 class="page-title">Ramais</h1><div class="page-sub" id="ram-sub">Ramal e acessos de cada pessoa</div></div>
+            <div class="tabs" id="ram-tabs" hidden><button class="tab active" data-tab="users">Usuários</button><button class="tab" data-tab="groups">Grupos</button><button class="tab" data-tab="profiles">Funções</button></div></div>
+          <div id="ram-pane-users">
+            <div class="toolbar filters">
+              <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="ram-search" placeholder="Buscar usuário…" autocomplete="off" /></div>
+              <select class="field fsel" id="ram-group" hidden><option value="">Todos os grupos</option></select>
+              <select class="field fsel" id="ram-profile"><option value="">Todas as funções</option></select>
+              <select class="field fsel" id="ram-status"><option value="">Todos os status</option><option value="online">Conectado</option><option value="offline">Desconectado</option><option value="unlinked">Desvinculado</option></select>
+              <div class="spacer"></div>
+              <span class="muted" id="ram-ranges" style="font-size:12.5px"></span>
+            </div>
+            <div class="card">
+              <table><thead><tr><th>Nome</th><th>Grupos</th><th>Função</th><th>Ramal</th><th>Status</th><th style="text-align:right" id="ram-actions-th">Ações</th></tr></thead>
+              <tbody id="ram-rows"><tr><td colspan="6" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr></tbody></table>
+            </div>
           </div>
-          <div class="card">
-            <table><thead><tr><th>Nome</th><th>Perfil</th><th>Ramal</th><th>Status</th><th style="text-align:right" id="ram-actions-th">Ações</th></tr></thead>
-            <tbody id="ram-rows"><tr><td colspan="5" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr></tbody></table>
+          <div id="ram-pane-groups" hidden>
+            <div class="note-box" style="margin-bottom:12px">Regra para todas as pessoas do grupo (setor do Comunic Chat). Vence a regra da função e perde para o ajuste individual. Quem está em vários grupos fica com a liberação se algum grupo liberar. Não vale para administradores.</div>
+            <div class="card" style="overflow-x:auto"><table><thead id="grp-head"></thead><tbody id="grp-rows"></tbody></table></div>
+          </div>
+          <div id="ram-pane-profiles" hidden>
+            <div class="note-box" style="margin-bottom:12px">Regra para todas as pessoas com a mesma função (perfil do Comunic Chat). É o nível mais geral: grupo e ajuste individual vencem. Não vale para administradores.</div>
+            <div class="card" style="overflow-x:auto"><table><thead id="prf-head"></thead><tbody id="prf-rows"></tbody></table></div>
           </div>
           <div class="appmsg err" id="ram-msg"></div>
         </section>
@@ -221,8 +258,10 @@
         <!-- DASHBOARD -->
         <section class="view" data-view="dashboard" hidden>
           <div class="page-head"><div><h1 class="page-title">Dashboard</h1><div class="page-sub" id="db-sub">Métricas de chamadas</div></div></div>
-          <div class="toolbar">
+          <div class="toolbar filters">
             <div class="tabs" id="db-range"><button class="tab" data-r="0">Hoje</button><button class="tab active" data-r="7">7 dias</button><button class="tab" data-r="30">30 dias</button></div>
+            <select class="field fsel" id="db-group" hidden><option value="">Todos os grupos</option></select>
+            <select class="field fsel" id="db-agent" hidden><option value="">Todos os atendentes</option></select>
             <div class="spacer"></div><span class="muted" id="db-sync" style="font-size:12.5px"></span>
           </div>
           <div id="db-body">
@@ -240,7 +279,7 @@
           <div class="chart-tip" id="chart-tip" hidden></div>
         </section>
 
-        <!-- CHAMADAS -->
+        <!-- CHAMADAS (com gravações: ouvir, baixar e baixar várias em ZIP) -->
         <section class="view" data-view="chamadas" hidden>
           <div class="page-head"><div><h1 class="page-title">Chamadas</h1><div class="page-sub" id="ch-sub">Histórico de chamadas</div></div>
             <button class="btn ghost" id="ch-export" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Exportar CSV</button></div>
@@ -249,30 +288,22 @@
             <input type="date" class="field fdate" id="ch-from"><span class="muted">até</span><input type="date" class="field fdate" id="ch-to">
             <select class="field fsel" id="ch-type"><option value="">Todos os tipos</option><option value="Inbound">Recebidas</option><option value="Outbound">Efetuadas</option><option value="Internal">Internas</option></select>
             <select class="field fsel" id="ch-status"><option value="">Todos os status</option><option value="answered">Atendidas</option><option value="missed">Não atendidas</option></select>
+            <select class="field fsel" id="ch-group" hidden><option value="">Todos os grupos</option></select>
+            <select class="field fsel" id="ch-agent" hidden><option value="">Todos os atendentes</option></select>
+            <label class="switch" id="ch-rec-wrap" hidden><input type="checkbox" id="ch-rec"><span class="trk"></span>Só com gravação</label>
+          </div>
+          <div class="selbar" id="ch-selbar" hidden>
+            <span id="ch-selcount"></span><div class="spacer"></div>
+            <a class="link" id="ch-selclear">Limpar seleção</a>
+            <button class="btn" id="ch-zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Baixar ZIP</button>
           </div>
           <div class="card">
-            <table><thead><tr><th>Data/hora</th><th>Tipo</th><th>De</th><th>Para</th><th>Atendente</th><th>Status</th><th class="num">Conversa</th></tr></thead>
+            <table><thead><tr><th class="sel" id="ch-selth" hidden><input type="checkbox" class="chk" id="ch-selall" title="Selecionar as gravações desta página"></th><th>Data/hora</th><th>Tipo</th><th>De</th><th>Para</th><th>Atendente</th><th>Status</th><th class="num">Conversa</th><th style="text-align:right" id="ch-act-th">Gravação</th></tr></thead>
             <tbody id="ch-rows"></tbody></table>
           </div>
           <div class="pager"><span class="muted" id="ch-count"></span><div class="spacer"></div><button class="act" id="ch-prev">Anterior</button><button class="act" id="ch-next">Próxima</button></div>
           <div class="appmsg err" id="ch-msg"></div>
-        </section>
-
-        <!-- GRAVAÇÕES -->
-        <section class="view" data-view="gravacoes" hidden>
-          <div class="page-head"><div><h1 class="page-title">Gravações</h1><div class="page-sub" id="rc-sub">Gravações de chamadas</div></div></div>
-          <div class="toolbar filters">
-            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="rc-q" placeholder="Número ou nome…" autocomplete="off" /></div>
-            <input type="date" class="field fdate" id="rc-from"><span class="muted">até</span><input type="date" class="field fdate" id="rc-to">
-            <select class="field fsel" id="rc-type"><option value="">Todos os tipos</option><option value="Inbound">Recebidas</option><option value="Outbound">Efetuadas</option><option value="Internal">Internas</option></select>
-          </div>
-          <div class="card">
-            <table><thead><tr><th>Data/hora</th><th>Tipo</th><th>De</th><th>Para</th><th>Atendente</th><th class="num">Duração</th><th style="text-align:right">Ações</th></tr></thead>
-            <tbody id="rc-rows"></tbody></table>
-          </div>
-          <div class="pager"><span class="muted" id="rc-count"></span><div class="spacer"></div><button class="act" id="rc-prev">Anterior</button><button class="act" id="rc-next">Próxima</button></div>
-          <div class="appmsg err" id="rc-msg"></div>
-          <div class="muted" style="font-size:12px;margin-top:10px">As gravações ficam no PBX; o painel só as reproduz. Cada vez que alguém ouve ou baixa, fica registrado na auditoria.</div>
+          <div class="muted" style="font-size:12px;margin-top:10px">As gravações ficam no PBX; o painel só as reproduz e baixa. Cada escuta e cada download (inclusive em ZIP) fica registrado na auditoria.</div>
         </section>
 
         <!-- Player de gravação (fixo no rodapé) -->
@@ -310,14 +341,24 @@
           <div class="appmsg err" id="emp-msg"></div>
         </section>
 
-        <!-- ACESSOS -->
-        <section class="view" data-view="acessos" hidden>
-          <div class="page-head"><div><h1 class="page-title">Acessos</h1><div class="page-sub">Ligue ou desligue cada permissão por pessoa. O papel (perfil no Comunic Chat) é só o ponto de partida; toda mudança vale na hora e fica na auditoria.</div></div></div>
-          <div class="toolbar"><div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg><input id="acc-search" placeholder="Buscar usuário…" autocomplete="off" /></div></div>
-          <div class="card" style="overflow-x:auto"><table><thead id="acc-head"></thead><tbody id="acc-rows"></tbody></table></div>
-          <div class="acc-legend"><span><i></i>ajustado em relação ao padrão do papel</span><span>Interruptor apagado = travado (passe o mouse para ver o motivo)</span><span>Cada pessoa sempre vê os próprios dados</span></div>
-          <div class="appmsg err" id="acc-msg"></div>
-        </section>
+        <!-- Modal: pessoa (ramal + acessos + grupos visíveis) -->
+        <dialog class="modal wide" id="dlg-user">
+          <div class="m-head"><div><div class="m-title" id="du-title">—</div><div class="u-sub" id="du-sub"></div></div><button class="m-close" data-close>×</button></div>
+          <div class="m-body">
+            <div class="m-sec">Ramal</div>
+            <div id="du-ext-wrap"></div>
+            <div id="du-acc-wrap" hidden>
+              <div class="m-sec" style="margin-top:8px">Acessos</div>
+              <div class="hint" style="margin-top:0">"Herda" segue o grupo, a função ou o papel (o mais específico vence). Ligado/Desligado vale só para esta pessoa.</div>
+              <div class="acc-list" id="du-acc"></div>
+              <div class="m-sec" style="margin-top:8px">Grupos visíveis</div>
+              <div class="hint" style="margin-top:0">De quais grupos esta pessoa vê chamadas, gravações e dashboard. A pessoa sempre vê as próprias chamadas.</div>
+              <div id="du-vis"></div>
+            </div>
+            <div class="err" id="du-msg"></div>
+          </div>
+          <div class="m-foot"><button class="btn ghost" data-close>Fechar</button></div>
+        </dialog>
 
         <!-- Modal: empresa -->
         <dialog class="modal" id="dlg-company">
@@ -391,9 +432,10 @@ async function showApp(sess){
   try{ me=await api('/v1/panel/me'); PERMS=me.permissions||{}; ROLE=me.role; }
   catch(e){ if(!JWT) return; PERMS={}; }
   $('#emg-banner').hidden=!(me?me.emergency:sess.emergency);
-  $('#ram-sub').innerHTML=esc('Vínculo de usuários a ramais — '+sess.company.name)+(can('manage_extensions')?'':'<span class="readonly-note">Somente visualização</span>');
+  $('#ram-sub').innerHTML=esc('Ramal e acessos de cada pessoa — '+sess.company.name)+(can('manage_extensions')||can('manage_access')?'':'<span class="readonly-note">Somente visualização</span>');
+  ME_DEPTS=(me&&me.deptIds)||[]; GROUPS_OK=false; AGENTS=null; CH_SEL.clear();
   // Menu: só o que a pessoa pode ver
-  const show={ramais:'view_extensions',dashboard:'view_dashboard',chamadas:'view_cdr',gravacoes:'play_recording',empresas:'provision_company',acessos:'manage_access'};
+  const show={ramais:'view_extensions',dashboard:'view_dashboard',chamadas:'view_cdr',empresas:'provision_company'};
   document.querySelectorAll('.nav-item').forEach(it=>{it.style.display=can(show[it.dataset.view])?'':'none';});
   $('#login').style.display='none'; $('#app').hidden=false;
   const first=[...document.querySelectorAll('.nav-item')].find(it=>it.style.display!=='none');
@@ -451,59 +493,182 @@ function switchView(name){
   $('.main').scrollTop=0;
   if(name==='ramais') loadRamais();
   if(name==='empresas') loadEmpresas();
-  if(name==='acessos') loadAcessos();
   if(name==='dashboard') loadDashboard();
   if(name==='chamadas') loadChamadas();
-  if(name==='gravacoes') loadGravacoes();
 }
 document.querySelectorAll('.nav-item').forEach(it=>it.addEventListener('click',()=>switchView(it.dataset.view)));
 
-/* ---------- Ramais ---------- */
-let ramSearchTimer;
-$('#ram-search').addEventListener('input',()=>{clearTimeout(ramSearchTimer);ramSearchTimer=setTimeout(loadRamais,350);});
+/* ---------- Grupos (setores do Comunic Chat) — usados nos filtros de todas as telas ---------- */
+let GROUPS=[], GROUPS_OK=false, ME_DEPTS=[];
+const groupName=(id)=>(GROUPS.find(g=>g.id===id)||{}).name||'Grupo removido';
+async function loadGroups(){
+  if(GROUPS_OK) return;
+  try{GROUPS=(await api('/v1/panel/groups')).items||[];GROUPS_OK=true;}catch{GROUPS=[];}
+  for(const id of ['#ram-group','#ch-group','#db-group']){
+    const sel=$(id),v=sel.value;
+    sel.innerHTML='<option value="">Todos os grupos</option>'+GROUPS.map(g=>'<option value="'+esc(g.id)+'">'+esc(g.name)+'</option>').join('');
+    sel.value=v; sel.hidden=!GROUPS.length;
+  }
+}
+/* Atendentes para os filtros de Chamadas e Dashboard (só quem vê os ramais da empresa). */
+let AGENTS=null;
+async function loadAgentFilters(){
+  if(AGENTS===null){ try{AGENTS=can('view_extensions')?await api('/v1/panel/users'):[];}catch{AGENTS=[];} }
+  for(const id of ['#ch-agent','#db-agent']){
+    const sel=$(id),v=sel.value;
+    sel.innerHTML='<option value="">Todos os atendentes</option>'+AGENTS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','pt-BR')).map(a=>'<option value="'+esc(a.userId)+'">'+esc(a.name||'Sem nome')+'</option>').join('');
+    sel.value=v; sel.hidden=AGENTS.length<2;
+  }
+}
 
+/* ---------- Ramais: Usuários | Grupos | Funções ---------- */
+const PERM_LABEL={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Ver dashboard',view_cdr:'Ver chamadas',export_cdr:'Exportar chamadas',play_recording:'Ouvir gravações',download_recording:'Baixar gravações',manage_access:'Conceder acessos'};
+const PROFILE_PT={SUPERADMIN:'Super Administrador',SUPERADMINISTRADOR:'Super Administrador',OWNER:'Proprietário',ADMIN:'Administrador',ADMINISTRADOR:'Administrador',AGENT:'Atendente',ATENDENTE:'Atendente',RESTRICTEDAGENT:'Atendente restrito'};
+const profilePt=(p)=>PROFILE_PT[String(p||'').toUpperCase().replace(/[^A-Z]/g,'')]||p||'';
+const SRC_LABEL={master:'master',role:'padrão do papel',profile:'regra da função',group:'regra do grupo',user:'ajuste individual'};
+let RAM_TAB='users', RAM_USERS=[], RAM_RANGES=[], ACC=null, DU_USER=null;
+document.querySelectorAll('#ram-tabs .tab').forEach(t=>t.onclick=()=>setRamTab(t.dataset.tab));
+let ramSearchTimer;
+$('#ram-search').addEventListener('input',()=>{clearTimeout(ramSearchTimer);ramSearchTimer=setTimeout(renderRamUsers,200);});
+['#ram-group','#ram-profile','#ram-status'].forEach(id=>$(id).addEventListener('change',renderRamUsers));
+
+function setRamTab(tab){
+  if(!can('manage_access')) tab='users';
+  RAM_TAB=tab;
+  document.querySelectorAll('#ram-tabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  $('#ram-pane-users').hidden=tab!=='users'; $('#ram-pane-groups').hidden=tab!=='groups'; $('#ram-pane-profiles').hidden=tab!=='profiles';
+  if(tab==='groups') renderRules('group'); if(tab==='profiles') renderRules('profile');
+}
+async function loadAccess(){ ACC=can('manage_access')?await api('/v1/panel/access'):null; }
 async function loadRamais(){
   $('#ram-msg').textContent='';
-  const rows=$('#ram-rows');
-  $('#ram-actions-th').hidden=!can('manage_extensions');
-  rows.innerHTML='<tr><td colspan="5" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
+  $('#ram-tabs').hidden=!can('manage_access');
+  $('#ram-actions-th').hidden=!(can('manage_extensions')||can('manage_access'));
+  $('#ram-rows').innerHTML='<tr><td colspan="6" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
   try{
-    const [users,ranges]=await Promise.all([api('/v1/panel/users'),api('/v1/panel/ranges')]);
+    const [users,ranges]=await Promise.all([api('/v1/panel/users'),api('/v1/panel/ranges'),loadGroups(),loadAccess()]);
+    RAM_USERS=users; RAM_RANGES=ranges; AGENTS=users;
     $('#ram-ranges').textContent=ranges.length?('Faixa: '+ranges.map(r=>r.from+'–'+r.to).join(', ')):'Sem faixa definida';
-    const q=($('#ram-search').value||'').trim().toLowerCase();
-    const list=q?users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)):users;
-    if(!list.length){rows.innerHTML='<tr><td colspan="5" class="muted" style="padding:20px;text-align:center">Nenhum usuário.</td></tr>';return;}
-    rows.innerHTML='';
-    for(const u of list){
-      const tr=document.createElement('tr');
-      const linked=!!u.extension;
-      const edit=can('manage_extensions'); // o backend valida de novo; aqui só esconde
-      tr.innerHTML=
-        '<td><div class="u-name">'+esc(u.name||'Sem nome')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
-        '<td class="muted">'+esc(u.profile||'')+'</td>'+
-        (edit?'<td><input class="ext-input" value="'+esc(u.extension||'')+'" placeholder="—"></td>'
-             :'<td><span class="u-name">'+esc(u.extension||'—')+'</span></td>')+
-        '<td class="st-cell">'+statusHtml(u)+'</td>'+
-        (edit?'<td><div class="row-actions">'+
-          '<button class="act primary act-save">Salvar</button>'+
-          (linked?'<button class="act danger act-del">Desvincular</button>':'')+
-        '</div></td>':'');
-      tr.dataset.uid=u.userId;
-      rows.appendChild(tr);
-      if(!edit) continue;
-      const input=tr.querySelector('input');
-      tr.querySelector('.act-save').onclick=async()=>{
-        const ext=input.value.trim();
-        if(!ext){$('#ram-msg').textContent='Informe um ramal para '+(u.name||u.userId)+'.';return;}
-        try{await api('/v1/panel/extensions',{method:'POST',body:JSON.stringify({helenaUserId:u.userId,extension:ext})});await loadRamais();}
-        catch(e){$('#ram-msg').textContent=e.message;}
-      };
-      const del=tr.querySelector('.act-del');
-      if(del) del.onclick=async()=>{try{await api('/v1/panel/extensions/'+encodeURIComponent(u.userId),{method:'DELETE'});await loadRamais();}catch(e){$('#ram-msg').textContent=e.message;}};
-    }
-  }catch(e){
-    rows.innerHTML='';
-    $('#ram-msg').textContent=e.message;
+    const pv=$('#ram-profile').value; const profs=[...new Set(users.map(u=>u.profile||'').filter(Boolean))].sort();
+    $('#ram-profile').innerHTML='<option value="">Todas as funções</option>'+profs.map(p=>'<option value="'+esc(p)+'">'+esc(profilePt(p))+'</option>').join(''); $('#ram-profile').value=pv;
+    renderRamUsers(); setRamTab(RAM_TAB);
+  }catch(e){$('#ram-rows').innerHTML='';$('#ram-msg').textContent=e.message;}
+}
+function renderRamUsers(){
+  const rows=$('#ram-rows');
+  const q=($('#ram-search').value||'').trim().toLowerCase(), g=$('#ram-group').value, pf=$('#ram-profile').value, st=$('#ram-status').value;
+  const list=RAM_USERS.filter(u=>(!q||(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.extension||'').includes(q))
+    &&(!g||(u.departmentIds||[]).includes(g))&&(!pf||u.profile===pf)&&(!st||u.status===st));
+  if(!list.length){rows.innerHTML='<tr><td colspan="6" class="muted" style="padding:20px;text-align:center">Nenhum usuário.</td></tr>';return;}
+  const act=can('manage_extensions')||can('manage_access');
+  rows.innerHTML='';
+  for(const u of list){
+    const tr=document.createElement('tr'); tr.dataset.uid=u.userId;
+    const gs=(u.departmentIds||[]).map(id=>'<span class="gchip">'+esc(groupName(id))+'</span>').join('')||'<span class="muted">—</span>';
+    const acc=ACC&&ACC.users.find(x=>x.userId===u.userId);
+    const custom=acc&&(Object.values(acc.perms).some(p=>p.explicit)||acc.visibility.custom);
+    tr.innerHTML='<td><div class="u-name">'+esc(u.name||'Sem nome')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
+      '<td><div class="gchips">'+(GROUPS.length?gs:'<span class="muted">—</span>')+'</div></td>'+
+      '<td class="muted">'+esc(profilePt(u.profile))+'</td>'+
+      '<td><span class="u-name">'+esc(u.extension||'—')+'</span></td>'+
+      '<td class="st-cell">'+statusHtml(u)+'</td>'+
+      (act?'<td><div class="row-actions"><button class="act'+(custom?' custom':'')+'" title="'+(custom?'Tem ajustes individuais de acesso ou de grupos visíveis':'Ramal e acessos')+'">Configurar</button></div></td>':'');
+    if(act) tr.querySelector('button').onclick=()=>openUserDlg(u.userId);
+    rows.appendChild(tr);
+  }
+}
+
+/* Opções de ramal: livres da faixa (até 2000 números) + o atual. Faixa grande demais vira campo livre. */
+function freeExtensions(current){
+  const used=new Set(RAM_USERS.map(u=>u.extension).filter(Boolean)); const out=[];
+  for(const r of RAM_RANGES){const a=Number(r.from),b=Number(r.to);if(!Number.isFinite(a)||!Number.isFinite(b)||b-a>2000)return null;
+    for(let n=a;n<=b;n++){const e=String(n).padStart(r.from.length,'0');if(!used.has(e)||e===current)out.push(e);}}
+  return out;
+}
+function triSelect(value,inheritLabel,locked){
+  const cls=value===true?' on':(value===false?' off':'');
+  return '<select class="tri'+cls+'"'+(locked?' disabled title="'+esc(locked)+'"':'')+'>'+
+    '<option value="inherit"'+(value==null?' selected':'')+'>'+esc(inheritLabel)+'</option>'+
+    '<option value="on"'+(value===true?' selected':'')+'>Ligado</option>'+
+    '<option value="off"'+(value===false?' selected':'')+'>Desligado</option></select>';
+}
+const triValue=(v)=>v==='on'?true:(v==='off'?false:null);
+
+function openUserDlg(uid){ DU_USER=uid; renderUserDlg(); $('#dlg-user').showModal(); }
+function renderUserDlg(){
+  const u=RAM_USERS.find(x=>x.userId===DU_USER); if(!u) return;
+  const acc=ACC&&ACC.users.find(x=>x.userId===u.userId);
+  $('#du-title').textContent=u.name||'Sem nome';
+  $('#du-sub').textContent=[u.email,profilePt(u.profile),(u.departmentIds||[]).map(groupName).join(', ')].filter(Boolean).join(' · ');
+  $('#du-msg').textContent='';
+  // Ramal
+  const w=$('#du-ext-wrap');
+  if(can('manage_extensions')){
+    const opts=freeExtensions(u.extension);
+    w.innerHTML='<div class="range-add">'+(opts?'<select class="field" id="du-ext" style="width:180px"><option value="">Sem ramal</option>'+opts.map(e=>'<option'+(e===u.extension?' selected':'')+'>'+e+'</option>').join('')+'</select>'
+      :'<input class="field" id="du-ext" style="width:180px" value="'+esc(u.extension||'')+'" placeholder="Ramal" inputmode="numeric">')+
+      '<button class="act primary" id="du-ext-save">Salvar ramal</button></div><div class="hint">'+esc($('#ram-ranges').textContent)+(opts?' · só aparecem os ramais livres':'')+'</div>';
+    $('#du-ext-save').onclick=async()=>{
+      const ext=$('#du-ext').value.trim(); $('#du-msg').textContent='';
+      try{
+        if(ext) await api('/v1/panel/extensions',{method:'POST',body:JSON.stringify({helenaUserId:u.userId,extension:ext})});
+        else if(u.extension) await api('/v1/panel/extensions/'+encodeURIComponent(u.userId),{method:'DELETE'});
+        RAM_USERS=await api('/v1/panel/users'); renderRamUsers(); renderUserDlg(); $('#du-msg').style.color='var(--green)'; $('#du-msg').textContent=ext?'Ramal '+ext+' salvo.':'Ramal desvinculado.';
+      }catch(e){$('#du-msg').style.color='';$('#du-msg').textContent=e.message;}
+    };
+  } else w.innerHTML='<span class="u-name">'+esc(u.extension||'Sem ramal')+'</span>';
+  // Acessos + visibilidade
+  $('#du-acc-wrap').hidden=!acc;
+  if(!acc) return;
+  $('#du-acc').innerHTML=ACC.grantable.map(g=>{const c=acc.perms[g.permission];
+    const inh='Herda: '+(c.inherited.on?'ligado':'desligado')+' ('+SRC_LABEL[c.inherited.source]+')';
+    return '<div class="acc-row" data-perm="'+g.permission+'"><div><div class="nm">'+esc(g.label)+'</div><div class="inh">'+(c.locked?esc(c.locked):(c.explicit?'Ajuste individual · sem ele: '+(c.inherited.on?'ligado':'desligado'):'Valendo: '+(c.on?'ligado':'desligado')+' por '+SRC_LABEL[c.source]))+'</div></div>'+
+      triSelect(c.explicit?c.on:null,c.locked&&c.source==='master'?'Master: total':inh,c.locked)+'</div>';}).join('');
+  $('#du-acc').querySelectorAll('.acc-row').forEach(row=>{const sel=row.querySelector('select');
+    sel.onchange=()=>saveRule('user',u.userId,row.dataset.perm,triValue(sel.value),sel);});
+  // Grupos visíveis
+  const v=acc.visibility, lockedV=v.locked;
+  const chosen=new Set(v.departmentIds||[]);
+  $('#du-vis').innerHTML=(lockedV?'<div class="hint">'+esc(lockedV)+'</div>':'')+
+    '<div class="radio-row"><label><input type="radio" name="du-vis-mode" value="default"'+(v.custom?'':' checked')+(lockedV?' disabled':'')+'>Padrão</label>'+
+    '<label><input type="radio" name="du-vis-mode" value="custom"'+(v.custom?' checked':'')+(lockedV?' disabled':'')+'>Escolher grupos</label></div>'+
+    '<div class="hint" id="du-vis-default"'+(v.custom?' hidden':'')+'>Padrão: '+(acc.role==='COMPANY_ADMIN'||acc.role==='COMPANY_VIEWER'?'todos os grupos da empresa':'os grupos da pessoa no Comunic Chat ('+(esc((u.departmentIds||[]).map(groupName).join(', '))||'nenhum')+')')+', conforme as permissões acima.</div>'+
+    '<div class="vis-grid" id="du-vis-list"'+(v.custom?'':' hidden')+'>'+(GROUPS.length?GROUPS.map(g=>'<label><input type="checkbox" class="chk" value="'+esc(g.id)+'"'+(chosen.has(g.id)?' checked':'')+(lockedV?' disabled':'')+'>'+esc(g.name)+'</label>').join(''):'<span class="muted">Nenhum grupo no Comunic Chat.</span>')+'</div>';
+  const saveVis=async()=>{
+    const mode=document.querySelector('input[name="du-vis-mode"]:checked').value;
+    const ids=mode==='default'?null:[...document.querySelectorAll('#du-vis-list input:checked')].map(i=>i.value);
+    $('#du-msg').textContent='';
+    try{await api('/v1/panel/access/visibility/'+encodeURIComponent(u.userId),{method:'PUT',body:JSON.stringify({departmentIds:ids})});await loadAccess();renderUserDlg();renderRamUsers();}
+    catch(e){$('#du-msg').style.color='';$('#du-msg').textContent=e.message;}
+  };
+  document.querySelectorAll('input[name="du-vis-mode"]').forEach(r=>r.onchange=()=>{$('#du-vis-list').hidden=r.value!=='custom'||!r.checked;$('#du-vis-default').hidden=r.value==='custom'&&r.checked;saveVis();});
+  document.querySelectorAll('#du-vis-list input').forEach(c=>c.onchange=saveVis);
+}
+async function saveRule(type,id,perm,value,sel){
+  if(sel) sel.disabled=true; $('#du-msg').textContent=''; $('#ram-msg').textContent='';
+  try{
+    await api('/v1/panel/access/rule',{method:'PUT',body:JSON.stringify({subjectType:type,subjectId:id,permission:perm,value})});
+    await loadAccess(); renderRamUsers();
+    if(type==='user') renderUserDlg(); else renderRules(type);
+  }catch(e){ if(sel) sel.disabled=false; (type==='user'?$('#du-msg'):$('#ram-msg')).textContent=e.message; if(type==='user') renderUserDlg(); else renderRules(type); }
+}
+/* Abas Grupos e Funções: uma linha por grupo/função, uma coluna por permissão. */
+function renderRules(type){
+  if(!ACC) return;
+  const head=type==='group'?$('#grp-head'):$('#prf-head'), body=type==='group'?$('#grp-rows'):$('#prf-rows');
+  head.innerHTML='<tr><th>'+(type==='group'?'Grupo':'Função')+'</th>'+ACC.grantable.map(g=>'<th class="perm" title="'+esc(g.label)+'">'+esc(PERM_LABEL[g.permission]||g.permission)+'</th>').join('')+'</tr>';
+  const items=type==='group'?ACC.groups:ACC.profiles;
+  if(!items.length){body.innerHTML='<tr><td colspan="'+(1+ACC.grantable.length)+'" class="muted" style="padding:20px;text-align:center">'+(type==='group'?'Nenhum grupo no Comunic Chat.':'Nenhuma função.')+'</td></tr>';return;}
+  body.innerHTML='';
+  for(const it of items){
+    const id=type==='group'?it.id:it.key, rules=(ACC.rules[type]||{})[id]||{};
+    const tr=document.createElement('tr');
+    const adminNote=type==='profile'&&it.admin?'Regras por função não valem para administradores':null;
+    tr.innerHTML='<td><div class="u-name">'+esc(it.name||it.label)+'</div><div class="u-sub">'+it.members+' pessoa'+(it.members===1?'':'s')+(adminNote?' · não se aplica (admin)':'')+'</div></td>'+
+      ACC.grantable.map(g=>{const val=g.permission in rules?rules[g.permission]:null;
+        return '<td class="perm" data-perm="'+g.permission+'">'+triSelect(val,'Herda',adminNote||(g.masterOnly?'Só o master concede esta permissão':null))+'</td>';}).join('');
+    tr.querySelectorAll('td[data-perm]').forEach(td=>{const sel=td.querySelector('select');sel.onchange=()=>saveRule(type,id,td.dataset.perm,triValue(sel.value),sel);});
+    body.appendChild(tr);
   }
 }
 
@@ -514,14 +679,14 @@ function statusHtml(u){
   const seen=u.lastSeen?' title="Último sinal: '+new Date(u.lastSeen).toLocaleString('pt-BR')+'"':' title="A extensão ainda não deu sinal desde que o servidor iniciou"';
   return '<span class="status"'+seen+'><span class="dot off"></span>Desconectado</span>';
 }
-// Atualiza só a coluna Status a cada 30 s enquanto a tela Ramais está aberta
-// (não recria as linhas, para não apagar um ramal que esteja sendo digitado).
+// Atualiza só a coluna Status a cada 30 s enquanto a tela Ramais está aberta.
 setInterval(async()=>{
   const view=document.querySelector('.view[data-view="ramais"]');
-  if(!JWT||!view||view.hidden||document.hidden) return;
+  if(!JWT||!view||view.hidden||document.hidden||RAM_TAB!=='users') return;
   try{
     const users=await api('/v1/panel/users');
     for(const u of users){
+      const old=RAM_USERS.find(x=>x.userId===u.userId); if(old){old.status=u.status;old.lastSeen=u.lastSeen;}
       const cell=document.querySelector('#ram-rows tr[data-uid="'+CSS.escape(u.userId)+'"] .st-cell');
       if(cell) cell.innerHTML=statusHtml(u);
     }
@@ -692,17 +857,19 @@ $('#dp-save').onclick=async()=>{
 let DB_RANGE=7;
 const fmtDur=(s)=>{s=Math.round(s||0);if(s<60)return s+'s';const m=Math.floor(s/60);if(m<60)return m+'min '+String(s%60).padStart(2,'0')+'s';return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'min';};
 const ymd=(d)=>{const t=new Date(d.getTime()-d.getTimezoneOffset()*60000);return t.toISOString().slice(0,10);};
+['#db-group','#db-agent'].forEach(id=>$(id).addEventListener('change',()=>loadDashboard()));
 document.querySelectorAll('#db-range .tab').forEach(b=>b.onclick=()=>{DB_RANGE=Number(b.dataset.r);document.querySelectorAll('#db-range .tab').forEach(x=>x.classList.toggle('active',x===b));loadDashboard();});
 function rangeDates(days){const to=new Date();const from=new Date();from.setDate(from.getDate()-(days?days-1:0));return{from:ymd(from),to:ymd(to)};}
 function syncLabel(r){return r.syncedAt?'Atualizado '+new Date(r.syncedAt).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'';}
-function scopeLabel(s){return s==='self'?'Suas chamadas':(s==='department'?'Chamadas do seu setor':'Chamadas da empresa');}
 async function loadDashboard(){
   $('#db-msg').textContent='';
   const {from,to}=rangeDates(DB_RANGE);
   try{
-    const r=await api('/v1/panel/dashboard?from='+from+'&to='+to);
+    loadGroups(); loadAgentFilters();
+    const p=new URLSearchParams({from,to}); if($('#db-group').value)p.set('group',$('#db-group').value); if($('#db-agent').value)p.set('userId',$('#db-agent').value);
+    const r=await api('/v1/panel/dashboard?'+p);
     $('#db-sync').textContent=syncLabel(r);
-    $('#db-sub').textContent=scopeLabel(PERMS.view_dashboard);
+    $('#db-sub').textContent=scopeSub('view_dashboard');
     const k=r.kpis;
     if(!r.apiConfigured&&!k.total){
       $('#db-kpis').innerHTML='';
@@ -747,79 +914,90 @@ function barChart(el,data,labelEvery){
     gr.onmouseleave=()=>{tip.hidden=true;};});
 }
 
-/* ---------- Chamadas ---------- */
-let CH_PAGE=1, CH_TOTAL=0;
+/* ---------- Chamadas (com gravações) ---------- */
+let CH_PAGE=1, CH_TOTAL=0, CH_ITEMS=[], CH_CAN={play:false,download:false}, PL_URL=null, PL_CALL=null;
+const CH_SEL=new Map(); // id -> chamada (a seleção vale entre páginas)
+const PLAY_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.52.85l11.1-6.86a1 1 0 000-1.7L9.52 4.29A1 1 0 008 5.14z"/></svg>';
+const DL_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
 const DIR_ICON={Inbound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 4.5l-15 15m0 0h11.25M4.5 19.5V8.25"/></svg>Recebida',
   Outbound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/></svg>Efetuada',
   Internal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>Interna'};
 const ST={ANSWERED:['ok','Atendida'],'NO ANSWER':['warn','Não atendida'],BUSY:['warn','Ocupado'],FAILED:['off','Falhou'],VOICEMAIL:['off','Correio de voz']};
-function chFilters(){const p=new URLSearchParams();for(const [k,id] of [['q','#ch-q'],['from','#ch-from'],['to','#ch-to'],['type','#ch-type'],['status','#ch-status']]){const v=$(id).value.trim();if(v)p.set(k,v);}return p;}
-let chTimer; ['#ch-q','#ch-from','#ch-to','#ch-type','#ch-status'].forEach(id=>$(id).addEventListener(id==='#ch-q'?'input':'change',()=>{clearTimeout(chTimer);chTimer=setTimeout(()=>{CH_PAGE=1;loadChamadas();},300);}));
+function chFilters(){const p=new URLSearchParams();for(const [k,id] of [['q','#ch-q'],['from','#ch-from'],['to','#ch-to'],['type','#ch-type'],['status','#ch-status'],['group','#ch-group'],['userId','#ch-agent']]){const v=$(id).value.trim();if(v)p.set(k,v);}if($('#ch-rec').checked)p.set('rec','1');return p;}
+let chTimer; ['#ch-q','#ch-from','#ch-to','#ch-type','#ch-status','#ch-group','#ch-agent','#ch-rec'].forEach(id=>$(id).addEventListener(id==='#ch-q'?'input':'change',()=>{clearTimeout(chTimer);chTimer=setTimeout(()=>{CH_PAGE=1;loadChamadas();},300);}));
 $('#ch-prev').onclick=()=>{if(CH_PAGE>1){CH_PAGE--;loadChamadas();}};
 $('#ch-next').onclick=()=>{if(CH_PAGE*50<CH_TOTAL){CH_PAGE++;loadChamadas();}};
 $('#ch-export').onclick=async()=>{
   $('#ch-msg').textContent='';
   try{const r=await fetch('/v1/panel/calls/export?'+chFilters(),{headers:{Authorization:'Bearer '+JWT}});
     if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.error||('HTTP '+r.status));}
-    const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='chamadas-'+ymd(new Date())+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    saveBlob(await r.blob(),'chamadas-'+ymd(new Date())+'.csv');
   }catch(e){$('#ch-msg').textContent=e.message;}
 };
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 function partyHtml(num,name){return '<div class="u-name" style="font-weight:600">'+esc(name||num||'—')+'</div>'+(name&&num?'<div class="u-sub">'+esc(num)+'</div>':'');}
+function scopeSub(perm){const s=PERMS[perm];return s==='self'?'Suas chamadas':(s==='department'?'Chamadas dos seus grupos':'Chamadas da empresa');}
 async function loadChamadas(){
   $('#ch-msg').textContent=''; $('#ch-export').hidden=!can('export_cdr');
-  $('#ch-sub').textContent=scopeLabel(PERMS.view_cdr);
+  $('#ch-sub').textContent=scopeSub('view_cdr');
+  loadGroups(); loadAgentFilters();
   if(!$('#ch-from').value){const r=rangeDates(7);$('#ch-from').value=r.from;$('#ch-to').value=r.to;}
-  const rows=$('#ch-rows'); rows.innerHTML='<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
+  const rows=$('#ch-rows'); rows.innerHTML='<tr><td colspan="9" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
   try{
     const p=chFilters();p.set('page',CH_PAGE);p.set('pageSize',50);
     const r=await api('/v1/panel/calls?'+p);
-    CH_TOTAL=r.total;
+    CH_TOTAL=r.total; CH_ITEMS=r.items; CH_CAN={play:!!r.canPlay,download:!!r.canDownload};
+    $('#ch-rec-wrap').hidden=!(CH_CAN.play||CH_CAN.download);
+    $('#ch-selth').hidden=!CH_CAN.download; $('#ch-act-th').hidden=!(CH_CAN.play||CH_CAN.download);
     $('#ch-count').textContent=r.total?((CH_PAGE-1)*50+1)+'–'+Math.min(CH_PAGE*50,r.total)+' de '+r.total.toLocaleString('pt-BR'):'';
     $('#ch-prev').disabled=CH_PAGE<=1; $('#ch-next').disabled=CH_PAGE*50>=r.total;
-    if(!r.items.length){rows.innerHTML='<tr><td colspan="7" class="empty-cdr">Nenhuma chamada no período.</td></tr>';return;}
-    rows.innerHTML=r.items.map(c=>{const st=ST[c.status]||['off',c.status||'—'];
-      return '<tr><td>'+(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td>'+
+    if(!r.items.length){rows.innerHTML='<tr><td colspan="9" class="empty-cdr">Nenhuma chamada no período.</td></tr>';updateSelbar();return;}
+    rows.innerHTML='';
+    for(const c of r.items){
+      const st=ST[c.status]||['off',c.status||'—'];
+      const tr=document.createElement('tr');
+      tr.innerHTML=(CH_CAN.download?'<td class="sel"><input type="checkbox" class="chk"'+(c.hasRecording?'':' disabled title="Sem gravação"')+(CH_SEL.has(c.id)?' checked':'')+'></td>':'')+
+        '<td>'+(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td>'+
         '<td><span class="dir">'+(DIR_ICON[c.direction]||esc(c.direction||'—'))+'</span></td>'+
         '<td>'+partyHtml(c.fromNumber,c.fromName)+'</td><td>'+partyHtml(c.toNumber,c.toName)+'</td>'+
         '<td>'+(c.agent?esc(c.agent):'<span class="muted">—</span>')+'</td>'+
         '<td><span class="badge '+st[0]+'">'+esc(st[1])+'</span></td>'+
-        '<td class="num">'+(c.status==='ANSWERED'?fmtDur(c.talk):'—')+(c.hasRecording&&can('play_recording')?'<button class="rec-btn" title="Ouvir gravação" data-rec="'+esc(c.id)+'">'+PLAY_ICON+'</button>':'')+'</td></tr>';}).join('');
-    rows.querySelectorAll('[data-rec]').forEach(b=>{const c=r.items.find(x=>x.id===b.dataset.rec);b.onclick=()=>playRecording(c);});
-  }catch(e){rows.innerHTML='';$('#ch-msg').textContent=e.message;}
-}
-
-/* ---------- Gravações ---------- */
-let RC_PAGE=1, RC_TOTAL=0, PL_URL=null, PL_CALL=null;
-function rcFilters(){const p=new URLSearchParams();for(const [k,id] of [['q','#rc-q'],['from','#rc-from'],['to','#rc-to'],['type','#rc-type']]){const v=$(id).value.trim();if(v)p.set(k,v);}return p;}
-let rcTimer; ['#rc-q','#rc-from','#rc-to','#rc-type'].forEach(id=>$(id).addEventListener(id==='#rc-q'?'input':'change',()=>{clearTimeout(rcTimer);rcTimer=setTimeout(()=>{RC_PAGE=1;loadGravacoes();},300);}));
-$('#rc-prev').onclick=()=>{if(RC_PAGE>1){RC_PAGE--;loadGravacoes();}};
-$('#rc-next').onclick=()=>{if(RC_PAGE*50<RC_TOTAL){RC_PAGE++;loadGravacoes();}};
-const PLAY_ICON='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.52.85l11.1-6.86a1 1 0 000-1.7L9.52 4.29A1 1 0 008 5.14z"/></svg>';
-async function loadGravacoes(){
-  $('#rc-msg').textContent=''; $('#rc-sub').textContent=PERMS.play_recording==='self'?'Suas gravações':(PERMS.play_recording==='department'?'Gravações do seu setor':'Gravações da empresa');
-  if(!$('#rc-from').value){const r=rangeDates(7);$('#rc-from').value=r.from;$('#rc-to').value=r.to;}
-  const rows=$('#rc-rows'); rows.innerHTML='<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
-  try{
-    const p=rcFilters();p.set('page',RC_PAGE);p.set('pageSize',50);
-    const r=await api('/v1/panel/recordings?'+p);
-    RC_TOTAL=r.total;
-    $('#rc-count').textContent=r.total?((RC_PAGE-1)*50+1)+'–'+Math.min(RC_PAGE*50,r.total)+' de '+r.total.toLocaleString('pt-BR'):'';
-    $('#rc-prev').disabled=RC_PAGE<=1; $('#rc-next').disabled=RC_PAGE*50>=r.total;
-    if(!r.items.length){rows.innerHTML='<tr><td colspan="7" class="empty-cdr">Nenhuma gravação no período.</td></tr>';return;}
-    rows.innerHTML='';
-    for(const c of r.items){
-      const tr=document.createElement('tr');
-      tr.innerHTML='<td>'+(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td>'+
-        '<td><span class="dir">'+(DIR_ICON[c.direction]||esc(c.direction||'—'))+'</span></td>'+
-        '<td>'+partyHtml(c.fromNumber,c.fromName)+'</td><td>'+partyHtml(c.toNumber,c.toName)+'</td>'+
-        '<td>'+(c.agent?esc(c.agent):'<span class="muted">—</span>')+'</td><td class="num">'+fmtDur(c.talk)+'</td>'+
-        '<td><div class="row-actions"><button class="act primary act-play">'+PLAY_ICON+'Ouvir</button>'+(r.canDownload?'<button class="act act-dl">Baixar</button>':'')+'</div></td>';
-      tr.querySelector('.act-play').onclick=()=>playRecording(c);
-      const dl=tr.querySelector('.act-dl'); if(dl) dl.onclick=()=>downloadRecording(c);
+        '<td class="num">'+(c.status==='ANSWERED'?fmtDur(c.talk):'—')+'</td>'+
+        ((CH_CAN.play||CH_CAN.download)?'<td><div class="row-actions">'+(c.hasRecording?
+          (CH_CAN.play?'<button class="act act-play" title="Ouvir">'+PLAY_ICON+'Ouvir</button>':'')+
+          (CH_CAN.download?'<button class="act act-dl" title="Baixar esta gravação">'+DL_ICON+'Baixar</button>':'')
+          :'<span class="muted" style="font-size:12px">—</span>')+'</div></td>':'');
+      const cb=tr.querySelector('td.sel input');
+      if(cb) cb.onchange=()=>{if(cb.checked)CH_SEL.set(c.id,c);else CH_SEL.delete(c.id);updateSelbar();};
+      const pl=tr.querySelector('.act-play'); if(pl) pl.onclick=()=>playRecording(c);
+      const dl=tr.querySelector('.act-dl'); if(dl) dl.onclick=()=>downloadRecording(c,dl);
       rows.appendChild(tr);
     }
-  }catch(e){rows.innerHTML='';$('#rc-msg').textContent=e.message;}
+    updateSelbar();
+  }catch(e){rows.innerHTML='';$('#ch-msg').textContent=e.message;}
 }
+function updateSelbar(){
+  const n=CH_SEL.size; $('#ch-selbar').hidden=!CH_CAN.download||!n;
+  $('#ch-selcount').textContent=n+' gravaç'+(n===1?'ão selecionada':'ões selecionadas');
+  const pageRec=CH_ITEMS.filter(c=>c.hasRecording);
+  const all=$('#ch-selall'); all.checked=pageRec.length>0&&pageRec.every(c=>CH_SEL.has(c.id)); all.indeterminate=!all.checked&&pageRec.some(c=>CH_SEL.has(c.id)); all.disabled=!pageRec.length;
+}
+$('#ch-selall').onchange=()=>{const on=$('#ch-selall').checked;for(const c of CH_ITEMS){if(!c.hasRecording)continue;if(on)CH_SEL.set(c.id,c);else CH_SEL.delete(c.id);}
+  document.querySelectorAll('#ch-rows td.sel input:not(:disabled)').forEach(i=>i.checked=on);updateSelbar();};
+$('#ch-selclear').onclick=()=>{CH_SEL.clear();document.querySelectorAll('#ch-rows td.sel input').forEach(i=>i.checked=false);updateSelbar();};
+$('#ch-zip').onclick=async()=>{
+  const btn=$('#ch-zip'),ids=[...CH_SEL.keys()]; if(!ids.length) return;
+  if(ids.length>200){$('#ch-msg').textContent='Selecione no máximo 200 gravações por vez.';return;}
+  btn.disabled=true; const old=btn.innerHTML; btn.innerHTML='Preparando ZIP…'; $('#ch-msg').textContent='';
+  try{
+    const r=await fetch('/v1/panel/recordings/zip',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+JWT},body:JSON.stringify({ids})});
+    if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.error||('HTTP '+r.status));}
+    const name=((r.headers.get('content-disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'gravacoes.zip';
+    saveBlob(await r.blob(),name);
+    CH_SEL.clear(); document.querySelectorAll('#ch-rows td.sel input').forEach(i=>i.checked=false); updateSelbar();
+  }catch(e){$('#ch-msg').textContent=e.message;}
+  finally{btn.disabled=false;btn.innerHTML=old;}
+};
 /* Busca o áudio com o token (o <audio> não envia cabeçalho) e toca a partir da memória. */
 async function fetchRecording(id,download){
   const r=await fetch('/v1/panel/calls/'+encodeURIComponent(id)+'/recording'+(download?'?download=1':''),{headers:{Authorization:'Bearer '+JWT}});
@@ -830,7 +1008,7 @@ async function playRecording(c){
   const pl=$('#player'), au=$('#pl-audio');
   $('#pl-title').textContent=(c.fromName||c.fromNumber||'—')+' → '+(c.toName||c.toNumber||'—');
   $('#pl-sub').textContent='Carregando…'; pl.hidden=false; PL_CALL=c;
-  $('#pl-dl').hidden=!can('download_recording');
+  $('#pl-dl').hidden=!CH_CAN.download;
   try{
     const r=await fetchRecording(c.id,false);
     const blob=await r.blob();
@@ -839,58 +1017,18 @@ async function playRecording(c){
     $('#pl-sub').textContent=(c.startedAt?new Date(c.startedAt).toLocaleString('pt-BR'):'')+(c.agent?' · '+c.agent:'');
   }catch(e){$('#pl-sub').textContent=e.message;}
 }
-async function downloadRecording(c){
+async function downloadRecording(c,btn){
+  if(btn) btn.disabled=true;
   try{
     const r=await fetchRecording(c.id,true);
     const name=((r.headers.get('content-disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'gravacao.wav';
-    const blob=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    saveBlob(await r.blob(),name);
   }catch(e){alertMsg(e.message);}
+  finally{if(btn) btn.disabled=false;}
 }
 function alertMsg(m){const v=document.querySelector('.view:not([hidden]) .appmsg');if(v){v.style.color='';v.textContent=m;}}
 $('#pl-dl').onclick=()=>{if(PL_CALL) downloadRecording(PL_CALL);};
 $('#pl-close').onclick=()=>{const au=$('#pl-audio');au.pause();au.removeAttribute('src');au.load();if(PL_URL){URL.revokeObjectURL(PL_URL);PL_URL=null;}$('#player').hidden=true;PL_CALL=null;};
-
-/* ---------- Acessos ---------- */
-const ROLE_LABEL={SUPER_ADMIN:'Master',PARTNER_ADMIN:'Master do parceiro',COMPANY_ADMIN:'Admin da empresa',COMPANY_VIEWER:'Visualizador',SUPERVISOR:'Supervisor',AGENT:'Atendente'};
-const PERM_SHORT={view_extensions:'Ver ramais',manage_extensions:'Alterar ramais',view_dashboard:'Dashboard',view_cdr:'Chamadas',export_cdr:'Exportar',play_recording:'Ouvir gravações',download_recording:'Baixar gravações',manage_access:'Conceder acessos'};
-const SRC_TIP={master:'Master: acesso total',role:'Padrão do papel',granted:'Concedida (além do papel)',denied:'Retirada (o papel daria)',none:'Desligada'};
-let ACC=null;
-$('#acc-search').addEventListener('input',renderAcessos);
-async function loadAcessos(){
-  $('#acc-msg').textContent=''; $('#acc-rows').innerHTML='<tr><td class="muted" style="padding:20px;text-align:center">Carregando…</td></tr>';
-  try{ACC=await api('/v1/panel/access');renderAcessos();}
-  catch(e){$('#acc-rows').innerHTML='';$('#acc-msg').textContent=e.message;}
-}
-function renderAcessos(){
-  if(!ACC) return;
-  $('#acc-head').innerHTML='<tr><th>Usuário</th><th>Perfil no Comunic Chat</th><th>Papel</th>'+
-    ACC.grantable.map(g=>'<th class="perm" title="'+esc(g.label)+'">'+esc(PERM_SHORT[g.permission]||g.permission)+'</th>').join('')+'</tr>';
-  const q=($('#acc-search').value||'').trim().toLowerCase();
-  const list=q?ACC.users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)):ACC.users;
-  const rows=$('#acc-rows'); rows.innerHTML='';
-  if(!list.length){rows.innerHTML='<tr><td colspan="'+(3+ACC.grantable.length)+'" class="muted" style="padding:20px;text-align:center">Nenhum usuário.</td></tr>';return;}
-  for(const u of list){
-    const tr=document.createElement('tr');
-    const cls=u.role==='SUPER_ADMIN'||u.role==='PARTNER_ADMIN'?'super':(u.role==='COMPANY_ADMIN'?'admin':'');
-    let html='<td><div class="u-name">'+esc(u.name||'Sem nome')+(u.self?' <span class="muted" style="font-weight:500">(você)</span>':'')+'</div><div class="u-sub">'+esc(u.email||'')+'</div></td>'+
-      '<td class="muted">'+esc(u.profile||'')+'</td><td><span class="role-tag '+cls+'">'+esc(ROLE_LABEL[u.role]||u.role)+'</span></td>';
-    for(const g of ACC.grantable){
-      const c=u.perms[g.permission]||{on:false,source:'none',locked:null};
-      const custom=c.source==='granted'||c.source==='denied';
-      const tip=esc((c.locked?c.locked+' · ':'')+SRC_TIP[c.source]);
-      html+='<td class="perm"><label class="switch sm'+(custom?' custom':'')+'" title="'+tip+'"><input type="checkbox" data-perm="'+g.permission+'"'+(c.on?' checked':'')+(c.locked?' disabled':'')+'><span class="trk"></span></label></td>';
-    }
-    tr.innerHTML=html;
-    tr.querySelectorAll('input[data-perm]').forEach(cb=>cb.onchange=async()=>{
-      cb.disabled=true; $('#acc-msg').textContent='';
-      try{
-        await api('/v1/panel/access/'+encodeURIComponent(u.userId),{method:'PUT',body:JSON.stringify({permission:cb.dataset.perm,granted:cb.checked})});
-        await loadAcessos(); // recarrega: mostra a origem certa (padrão/concedida/retirada)
-      }catch(e){cb.checked=!cb.checked;cb.disabled=false;$('#acc-msg').textContent=e.message;}
-    });
-    rows.appendChild(tr);
-  }
-}
 
 tryAuto();
 </script>

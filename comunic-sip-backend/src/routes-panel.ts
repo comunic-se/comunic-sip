@@ -1,10 +1,9 @@
 // Rotas do painel de gestão. Tudo protegido por requireAuth + escopo.
 import type { FastifyInstance } from 'fastify';
 import { prisma } from './db.js';
-import { decryptSecret } from './crypto.js';
 import { requireAuth, type PanelToken } from './auth.js';
-import { listAgents } from './helena-admin.js';
-import { effectiveScope, type Permission, type DataScope } from './rbac.js';
+import { listAgentsCached } from './helena-admin.js';
+import { effectiveScope, visibleGroups, type Permission, type DataScope } from './rbac.js';
 import { getPresence } from './presence.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -82,7 +81,7 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
 
     let agents;
     try {
-      agents = await listAgents(decryptSecret(company.helenaApiTokenEnc));
+      agents = await listAgentsCached(company.id, company.helenaApiTokenEnc, true);
     } catch (e) {
       req.log.error(e);
       return reply.code(502).send({ error: 'falha ao consultar usuários na Helena' });
@@ -90,10 +89,11 @@ export async function registerPanelRoutes(app: FastifyInstance): Promise<void> {
 
     const links = await prisma.extensionLink.findMany({ where: { companyId } });
     const byUser = new Map(links.map((l) => [l.helenaUserId, l.extensionNumber]));
-    // Escopo de leitura: setor = só agentes dos meus setores; próprio = só eu.
+    // Escopo de leitura: grupos visíveis (ajuste por pessoa ou padrão do escopo); próprio = só eu.
+    const vis = companyId === user.companyId ? await visibleGroups(user, scope) : null;
     const visible = agents.filter((a) => {
-      if (scope === 'self') return a.userId === user.userId;
-      if (scope === 'department') return a.userId === user.userId || a.departments.some((d) => user.deptIds.includes(d.departmentId));
+      if (vis === 'self') return a.userId === user.userId;
+      if (Array.isArray(vis)) return a.userId === user.userId || a.departments.some((d) => vis.includes(d.departmentId));
       return true;
     });
     return visible.map((a) => ({

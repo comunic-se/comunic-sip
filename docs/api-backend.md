@@ -116,16 +116,16 @@ Não existe remoção (regra de negócio; a API do Helena também não oferece).
 
 ## Chamadas e Dashboard (JWT)
 
-Dados coletados do PBX pela OpenAPI (ver `integracoes-helena-yeastar.md`). Filtro por escopo: **self** = só as próprias (dono ou outra ponta de chamada interna) · **department** = atendentes dos meus setores · **company** = a empresa · **all** = master (pode pedir `companyId=*` para incluir chamadas sem empresa identificada).
+Dados coletados do PBX pela OpenAPI (ver `integracoes-helena-yeastar.md`). Filtro por escopo: **self** = só as próprias (dono ou outra ponta de chamada interna) · **department** = atendentes dos meus setores · **company** = a empresa · **all** = master (pode pedir `companyId=*` para incluir chamadas sem empresa identificada). Se a pessoa tem **grupos visíveis** ajustados (`user_visibility`), eles substituem o padrão de self/department/company (as próprias chamadas continuam visíveis).
 
 | Método | Rota | Permissão | Descrição |
 |---|---|---|---|
-| GET | `/v1/panel/calls` | `view_cdr` | Lista paginada. Filtros: `from`, `to` (YYYY-MM-DD, fuso do PBX), `type` (`Inbound`/`Outbound`/`Internal`), `status` (`answered`/`missed`), `q` (número ou nome), `userId`, `page`, `pageSize` (≤100) |
+| GET | `/v1/panel/calls` | `view_cdr` | Lista paginada. Filtros: `from`, `to` (YYYY-MM-DD, fuso do PBX), `type` (`Inbound`/`Outbound`/`Internal`), `status` (`answered`/`missed`), `q` (número ou nome), `userId`, `group` (setor do Comunic Chat), `rec=1` (só com gravação), `page`, `pageSize` (≤100). Cada item traz `hasRecording`; a resposta traz `canPlay` e `canDownload` |
 | GET | `/v1/panel/calls/export` | `export_cdr` (+ escopo de `view_cdr`) | CSV com `;` e BOM (abre direto no Excel), até 50 mil linhas. Grava `cdr_export` no `audit_log` |
-| GET | `/v1/panel/dashboard` | `view_dashboard` | `kpis` (recebidas, atendidas, perdidas, taxa de atendimento, efetuadas, internas, conversa média/total, espera média), `byDay`, `byHour`, `byUser`, `syncedAt`, `apiConfigured` |
+| GET | `/v1/panel/dashboard` | `view_dashboard` | Filtros `from`, `to`, `group`, `userId`. `kpis` (recebidas, atendidas, perdidas, taxa de atendimento, efetuadas, internas, conversa média/total, espera média), `byDay`, `byHour`, `byUser`, `syncedAt`, `apiConfigured` |
 | POST | `/v1/panel/pbx/:id/sync` | `manage_pbx` | Força a coleta agora (chamadas + vínculo das gravações). Auditado |
-| GET | `/v1/panel/recordings` | `play_recording` | Chamadas com gravação, no escopo da pessoa; mesmos filtros de `/calls`; `canDownload` indica se pode baixar |
 | GET | `/v1/panel/calls/:id/recording` | `play_recording` (+ `download_recording` com `?download=1`) | Áudio por **proxy autenticado**: o backend confere o escopo, pede a URL ao PBX (`recording/download`, cache de 25 min) e repassa o arquivo. Endereço e token do PBX nunca chegam ao navegador; nada é gravado em disco. Auditoria: `recording_download` sempre; `recording_play` 1× por pessoa/chamada a cada 10 min |
+| POST | `/v1/panel/recordings/zip` | `download_recording` | `{ ids: [callId…] }` (até 200, até 1 GB). Cada chamada é conferida no escopo de `download_recording`; as fora do escopo são ignoradas. Devolve um ZIP (sem compressão, áudio já é comprimido) montado em fluxo, com os arquivos `gravacao-AAAAMMDDHHMM-<de>-<para>.<ext>`; se alguma não vier do PBX, entra um `LEIA-ME.txt` listando as que faltaram. Auditoria: `recording_download_zip` com a lista |
 
 O cadastro do PBX (`POST/PATCH /v1/panel/pbx`) aceita `apiClientId` + `apiClientSecret` (Integrations → API), testados antes de salvar e cifrados; o `GET` informa só `apiConfigured`, `cdrSyncedAt` e `cdrSyncError`.
 
@@ -133,9 +133,11 @@ O cadastro do PBX (`POST/PATCH /v1/panel/pbx`) aceita `apiClientId` + `apiClient
 
 | Método | Rota | Permissão | Descrição |
 |---|---|---|---|
-| GET | `/v1/panel/me` | qualquer | `{ userId, role, emergency, company, permissions }` — permissões **efetivas** (papel + concessões) com escopo; o painel usa para mostrar só o que pode |
-| GET | `/v1/panel/access` | `manage_access` | Matriz usuário × permissão: para cada uma, `on`, `source` (`master` · `role` · `granted` · `denied` · `none`) e `locked` (motivo, quando o chamador não pode mexer) |
-| PUT | `/v1/panel/access/:helenaUserId` | `manage_access` | `{ permission, granted }` liga/desliga. Igual ao padrão do papel = remove o ajuste. **403** com o motivo se a célula estiver travada (master, próprio usuário, permissão só do master, outro admin) · **404** se o usuário não for da empresa |
+| GET | `/v1/panel/me` | qualquer | `{ userId, role, emergency, company, deptIds, permissions }` — permissões **efetivas** (papel + regras) com escopo; o painel usa para mostrar só o que pode |
+| GET | `/v1/panel/groups` | qualquer | Setores da empresa no Comunic Chat (`/core/v2/department`, cache de 5 min): `{ items: [{ id, name }] }`. Usado nos filtros |
+| GET | `/v1/panel/access` | `manage_access` | `groups` (com nº de pessoas), `profiles` (funções existentes; `admin=true` = regra por função não se aplica), `rules.group` / `rules.profile` (`{ id: { permissão: true/false } }`) e `users` — para cada permissão `on`, `source` (`master` · `role` · `profile` · `group` · `user`), `explicit`, `inherited` (o que valeria sem o ajuste individual) e `locked`; mais `visibility { custom, departmentIds, locked }` |
+| PUT | `/v1/panel/access/rule` | `manage_access` | `{ subjectType: 'user'\|'group'\|'profile', subjectId, permission, value: true\|false\|null }` — liga, desliga ou volta a herdar. **403** com o motivo se travado (master, próprio usuário, permissão só do master, outro admin) · **400** em regra de função de administrador · **404** se o alvo não for da empresa. Auditoria: `access_rule_allow` / `access_rule_deny` / `access_rule_inherit` |
+| PUT | `/v1/panel/access/visibility/:helenaUserId` | `manage_access` | `{ departmentIds: [..] \| null }` — grupos cujos dados a pessoa enxerga (`null` = padrão). Mesmas travas do ajuste individual. Auditoria: `access_visibility` |
 
 Respostas **403** dizem "você não tem permissão para esta ação" ou "fora do seu escopo".
 
