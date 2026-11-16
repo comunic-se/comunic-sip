@@ -5,7 +5,7 @@
 // eventos) está descrita em docs/notas-tecnicas e deve ser confirmada contra o
 // demo oficial. O fluxo abaixo segue essas notas.
 import { init } from 'ys-webrtc-sdk-core';
-import type { AnyMessage, CallAction, CallState, HistoryItem, RegStatus, SdkConfig } from './shared/messages';
+import type { AnyMessage, CallAction, CallState, HistoryItem, RegSnapshot, RegStatus, SdkConfig } from './shared/messages';
 import { DEFAULT_AUDIO, type AudioSettings } from './shared/audio';
 
 // Operador devolvido pelo SDK: { phone, pbx, destroy }
@@ -115,8 +115,10 @@ function stopRing(): void {
 }
 
 let regStatus: RegStatus = 'idle';
+let regDetail: string | undefined;
 function sendStatus(status: RegStatus, detail?: string): void {
   regStatus = status;
+  regDetail = detail;
   chrome.runtime
     .sendMessage({ target: 'background', type: 'STATUS', status, detail })
     .catch(() => { /* sem receptor */ });
@@ -474,7 +476,12 @@ async function getHistory(): Promise<HistoryItem[]> {
 chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) => {
   if (raw.target !== 'offscreen') return;
   if (raw.type === 'GET_REG') {
-    sendResponse({ status: regStatus, busy: isBusy() });
+    // O background perde a memória quando o Chrome o suspende: daqui vem o estado real.
+    const snap: RegSnapshot = {
+      status: regStatus, detail: regDetail, busy: isBusy(),
+      callState: currentSession ? snapshotState(currentSession, true) : { active: false },
+    };
+    sendResponse(snap);
     return undefined;
   }
   if (raw.type === 'GET_HISTORY') {

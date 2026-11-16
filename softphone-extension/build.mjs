@@ -63,7 +63,7 @@ const options = {
 // Content script não pode ser módulo ES: build separado em IIFE.
 /** @type {import('esbuild').BuildOptions} */
 const contentOptions = {
-  entryPoints: { 'click-to-call': 'src/content/click-to-call.ts' },
+  entryPoints: { 'click-to-call': 'src/content/click-to-call.ts', 'session-watch': 'src/content/session-watch.ts' },
   bundle: true,
   format: 'iife',
   target: 'chrome120',

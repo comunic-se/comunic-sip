@@ -86,6 +86,8 @@ export type ToBackground =
   // Click-to-call vindo da página do Comunic Chat
   | { target: 'background'; type: 'CLICK_TO_CALL'; number: string }
   | { target: 'background'; type: 'CONTACT_SAVE'; contact: Contact }
+  // content script -> background: token vigente da sessão do Comunic Chat
+  | { target: 'background'; type: 'HELENA_SESSION'; token: string; expiresAt?: number }
   // offscreen -> background
   | { target: 'background'; type: 'STATUS'; status: RegStatus; detail?: string }
   | { target: 'background'; type: 'CALL_EVENT'; event: string; call?: CallInfo }
@@ -111,6 +113,14 @@ export type ToPopup =
   | { target: 'popup'; type: 'CALL_STATE'; state: CallState };
 
 export type AnyMessage = ToBackground | ToOffscreen | ToPopup;
+
+/** Resposta do offscreen ao GET_REG: estado real do registro e da chamada. */
+export interface RegSnapshot {
+  status: RegStatus;
+  detail?: string;
+  busy: boolean;
+  callState?: CallState;
+}
 
 export interface StatusSnapshot {
   status: RegStatus;

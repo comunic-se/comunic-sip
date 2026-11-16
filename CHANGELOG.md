@@ -53,6 +53,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Rota de depuração `/v1/sip/signature` e o mapeamento fixo de ramais por variável de ambiente.
 
 ### Corrigido
+- **Extensão desconectava sozinha.** O token da sessão do Comunic Chat vale ~1 h e a extensão só o captava quando via uma requisição; renovações e reconexões usavam token vencido e o ramal ficava fora. Agora:
+  - um monitor nas abas do Comunic Chat (`session-watch.js`) lê o token vigente da própria página e avisa a extensão (e é injetado nas abas já abertas ao instalar/atualizar);
+  - um watchdog a cada minuto confere o registro e reconecta sozinho (sem derrubar chamada, com intervalo crescente entre falhas para respeitar o limite do login);
+  - se o backend recusa o token, a extensão busca o atual na aba e tenta de novo;
+  - o popup mostra o estado real do ramal e da chamada mesmo depois de o Chrome suspender o processo de fundo.
 - Coleta de chamadas: parava após ~3 h de histórico em PBX movimentado (páginas sobrepostas); agora usa marcador de horário. DID lido do campo `did`. Datas em texto no padrão DD/MM.
 - Coleta gravava chamadas de outros clientes do mesmo PBX; agora só de empresas cadastradas, e a migration `20261112160000_cdr_cursor` apaga as que entraram.
 - "Sair" da sessão de emergência entrava de novo sozinho pela extensão.

@@ -1,6 +1,6 @@
 // Service worker: orquestra. Cria/garante o offscreen, repassa mensagens
 // entre popup e offscreen e guarda o último status de registro e da chamada.
-import type { AnyMessage, CallState, StatusSnapshot, SdkConfig } from './shared/messages';
+import type { AnyMessage, CallState, RegSnapshot, StatusSnapshot, SdkConfig } from './shared/messages';
 import { toDialable, formatBR } from './shared/phone';
 import { BACKEND_URL } from './shared/config';
 import { DEFAULT_AUDIO, type AudioSettings } from './shared/audio';
@@ -125,14 +125,8 @@ let lastHelenaAuth = '';
 // de vencer via chrome.alarms (sobrevive à suspensão do service worker).
 const RENEW_ALARM = 'comunic-renew-sign';
 const RENEW_MARGIN_S = 15 * 60;
-const RENEW_RETRY_MIN = 5;
 
 type AuthResponse = { extension: string; pbxUrl: string; sign: string; signExpiresAt?: number; token?: string };
-
-/** Backend definido no build (shared/config.ts). */
-async function backendBase(): Promise<string> {
-  return BACKEND_URL;
-}
 
 /** Chama /v1/auth/extension e guarda config, validade e JWT. */
 async function authExtension(base: string, helenaToken: string): Promise<{ ok: true; config: SdkConfig } | { ok: false; status: number; text: string }> {
@@ -165,34 +159,123 @@ async function signatureExpiringSoon(): Promise<boolean> {
   return Number(signExpiresAt) - RENEW_MARGIN_S <= Date.now() / 1000;
 }
 
-let renewing = false;
-async function renewSignature(): Promise<void> {
-  if (renewing) return;
-  renewing = true;
+// ---------- Sessão do Comunic Chat (token da Helena) ----------
+// O token de acesso vale ~1 h; a página o renova sozinha. Recebemos o vigente de
+// três fontes: o monitor de sessão nas abas (content script), o pedido direto à
+// aba quando o guardado venceu e as requisições observadas (webRequest).
+const COMUNIC_PAGES = ['https://*.wts.chat/*', 'https://*.flw.chat/*'];
+
+function jwtExp(token: string): number | undefined {
   try {
-    const base = await backendBase();
-    const { helenaToken } = await chrome.storage.session.get('helenaToken');
-    if (!base || !helenaToken) {
-      // Sem sessão do Comunic Chat (navegador reaberto?). O próximo Bearer captado
-      // faz o login integrado de novo; até lá, tenta outra vez mais tarde.
-      chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
-      return;
+    const json = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof json.exp === 'number' ? json.exp : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function storeHelenaToken(token: string, expiresAt?: number): Promise<boolean> {
+  const { helenaToken } = await chrome.storage.session.get('helenaToken');
+  if (helenaToken === token) return false;
+  await chrome.storage.session.set({ helenaToken: token, helenaTokenExp: expiresAt ?? jwtExp(token) ?? 0 });
+  return true;
+}
+
+/** Pede o token atual às abas abertas do Comunic Chat. */
+async function tokenFromTabs(): Promise<string | null> {
+  const tabs = await chrome.tabs.query({ url: COMUNIC_PAGES }).catch(() => [] as chrome.tabs.Tab[]);
+  let best: { token: string; expiresAt?: number } | null = null;
+  for (const t of tabs) {
+    if (t.id == null) continue;
+    const r = (await chrome.tabs.sendMessage(t.id, { target: 'content', type: 'GET_HELENA_SESSION' }).catch(() => null)) as
+      { token?: string; expiresAt?: number } | null;
+    if (r?.token && (!best || (r.expiresAt ?? 0) > (best.expiresAt ?? 0))) best = { token: r.token, expiresAt: r.expiresAt };
+  }
+  if (!best) return null;
+  await storeHelenaToken(best.token, best.expiresAt);
+  return best.token;
+}
+
+/** Token vigente: o guardado, se ainda vale por mais de 1 min; senão, o da aba aberta. */
+async function freshHelenaToken(): Promise<string | null> {
+  const { helenaToken, helenaTokenExp } = await chrome.storage.session.get(['helenaToken', 'helenaTokenExp']);
+  const exp = Number(helenaTokenExp) || 0;
+  if (helenaToken && (!exp || exp - 60 > Date.now() / 1000)) return String(helenaToken);
+  return (await tokenFromTabs()) ?? (helenaToken ? String(helenaToken) : null);
+}
+
+// ---------- Watchdog do ramal ----------
+// Enquanto houver sessão do Comunic Chat, o ramal tem que estar registrado.
+// Roda a cada minuto (alarme), quando chega token novo, quando o registro falha
+// e quando a assinatura está para vencer. Não reinicia o SDK se já está tudo bem
+// nem durante uma chamada.
+const CONNECTING_GRACE_MS = 90_000; // dá tempo ao SDK de reconectar sozinho
+// Entre tentativas: 30 s, dobrando a cada falha seguida até 10 min (o backend
+// limita o login a 20/min por sessão; falha em série não pode martelar).
+const RETRY_BASE_MS = 30_000;
+const RETRY_MAX_MS = 10 * 60_000;
+let connectingSince = 0;
+let lastAttemptAt = 0;
+let failStreak = 0;
+const retryDelay = () => Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** failStreak);
+let ensuring = false;
+
+/** Estado real, perguntado a quem mantém o registro (o offscreen). */
+async function regSnapshot(): Promise<RegSnapshot> {
+  const has = await chrome.offscreen.hasDocument?.();
+  if (!has) return { status: 'idle', busy: false };
+  const r = (await chrome.runtime.sendMessage({ target: 'offscreen', type: 'GET_REG' }).catch(() => null)) as RegSnapshot | null;
+  return r ?? { status: 'idle', busy: false };
+}
+
+async function ensureConnected(reason: string, force = false): Promise<void> {
+  if (ensuring) return;
+  ensuring = true;
+  try {
+    const reg = await regSnapshot();
+    if (reg.busy) return; // nunca derruba chamada; a renovação pendente é aplicada ao fim dela
+    const expiring = await signatureExpiringSoon();
+    if (reg.status === 'registered' && !expiring && !force) { connectingSince = 0; failStreak = 0; return; }
+    if (reg.status === 'connecting' && !expiring && !force) {
+      if (!connectingSince) connectingSince = Date.now();
+      if (Date.now() - connectingSince < CONNECTING_GRACE_MS) return;
     }
-    const r = await authExtension(base, String(helenaToken));
+    if (!force && Date.now() - lastAttemptAt < retryDelay()) return;
+
+    let token = await freshHelenaToken();
+    if (!token) return; // sem Comunic Chat aberto/logado: nada a fazer até ele abrir
+    lastAttemptAt = Date.now();
+    failStreak++; // zera quando o ramal registra
+    console.log('[Comunic.SIP][watchdog] reconectando —', reason, '· status', reg.status, expiring ? '· assinatura vencendo' : '');
+
+    let r = await authExtension(BACKEND_URL, token);
+    if (!r.ok && r.status === 401) {
+      // Token da Helena vencido: pega o atual na aba e tenta de novo.
+      await chrome.storage.session.remove(['helenaToken', 'helenaTokenExp']);
+      token = await tokenFromTabs();
+      if (token) r = await authExtension(BACKEND_URL, token);
+    }
     if (!r.ok) {
-      console.log('[Comunic.SIP][sign] renovação falhou:', r.status);
-      chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
+      console.log('[Comunic.SIP][watchdog] backend recusou:', r.status, r.text);
+      if (reg.status !== 'registered') {
+        lastStatus = { status: 'failed', detail: r.status === 401 ? 'Sessão do Comunic Chat expirada — atualize a página' : `Backend ${r.status}` };
+        broadcastToPopup({ target: 'popup', type: 'STATUS', ...lastStatus });
+      }
       return;
     }
+    connectingSince = 0;
     await ensureOffscreen();
-    // O offscreen só reinicia o SDK se não houver chamada em andamento.
     sendToOffscreen({ target: 'offscreen', type: 'RENEW', config: r.config });
   } catch (e) {
-    console.log('[Comunic.SIP][sign] renovação falhou:', e);
-    chrome.alarms.create(RENEW_ALARM, { delayInMinutes: RENEW_RETRY_MIN });
+    console.log('[Comunic.SIP][watchdog] falhou:', e);
   } finally {
-    renewing = false;
+    ensuring = false;
   }
+}
+
+async function renewSignature(): Promise<void> {
+  await ensureConnected('renovação da assinatura', true);
+  // Se não deu (sem sessão/sem rede), o watchdog de 1 min tenta de novo.
 }
 
 // ---------- Click-to-call (página do Comunic Chat e menu de clique direito) ----------
@@ -211,8 +294,14 @@ async function clickToCall(input: string): Promise<{ ok: boolean; error?: string
 }
 
 const C2C_MENU = 'comunic-c2c';
-const COMUNIC_PAGES = ['https://*.wts.chat/*', 'https://*.flw.chat/*'];
 chrome.runtime.onInstalled.addListener(() => {
+  // Abas do Comunic Chat já abertas não recebem o content script novo até recarregar:
+  // injeta o monitor de sessão nelas agora.
+  chrome.tabs.query({ url: COMUNIC_PAGES }).then((tabs) => {
+    for (const t of tabs) {
+      if (t.id != null) chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['session-watch.js'] }).catch(() => {});
+    }
+  }).catch(() => {});
   chrome.contextMenus.create({
     id: C2C_MENU, title: 'Ligar para "%s" com Comunic.Chat', contexts: ['selection'], documentUrlPatterns: COMUNIC_PAGES,
   }, () => void chrome.runtime.lastError);
@@ -258,55 +347,30 @@ chrome.alarms.get(PRESENCE_ALARM).then((a) => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RENEW_ALARM) renewSignature();
-  if (alarm.name === PRESENCE_ALARM) presenceTick();
+  if (alarm.name === PRESENCE_ALARM) ensureConnected('verificação periódica').finally(presenceTick);
 });
-
-async function loginIntegrado(helenaToken: string): Promise<void> {
-  const base = await backendBase();
-  // Já conectado/conectando com assinatura válida? Não refaz.
-  if ((lastStatus.status === 'registered' || lastStatus.status === 'connecting') && !(await signatureExpiringSoon())) return;
-
-  lastStatus = { status: 'connecting', detail: 'Login integrado…' };
-  broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'connecting', detail: 'Login integrado…' });
-
-  try {
-    const r = await authExtension(base, helenaToken);
-    if (!r.ok) {
-      lastStatus = { status: 'failed', detail: `Backend ${r.status}` };
-      broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: `Backend ${r.status}: ${r.text}` });
-      return;
-    }
-    console.log('[Comunic.SIP][login] backend OK — ramal', r.config.extension);
-    await ensureOffscreen();
-    sendToOffscreen({ target: 'offscreen', type: 'RENEW', config: r.config });
-  } catch (e: any) {
-    lastStatus = { status: 'failed', detail: 'Backend inacessível' };
-    broadcastToPopup({ target: 'popup', type: 'STATUS', status: 'failed', detail: 'Backend inacessível: ' + String(e?.message ?? e) });
-  }
-}
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     const auth = details.requestHeaders?.find((h) => h.name.toLowerCase() === 'authorization');
     const val = auth?.value;
     if (val && val.startsWith('Bearer ') && val !== lastHelenaAuth) {
-      console.log('[Comunic.SIP][login] Bearer visto em', details.url);
       lastHelenaAuth = val;
-      chrome.storage.session.set({ helenaToken: val.slice(7) }).catch(() => {});
-      loginIntegrado(val.slice(7));
+      storeHelenaToken(val.slice(7)).then((changed) => { if (changed) ensureConnected('token captado'); });
     }
   },
   { urls: ['https://api.wts.chat/*', 'https://api.flw.chat/*'] },
   ['requestHeaders', 'extraHeaders'],
 );
 console.log('[Comunic.SIP][login] observador de token ativo');
+ensureConnected('service worker iniciado');
 
 // ---------- Ponte com o painel de gestão ----------
 // O painel (página servida pelo backend) pede a sessão à extensão, que usa o
 // Bearer já capturado da Helena para abrir a sessão do painel no backend.
 // Assim o gestor não precisa colar token nenhum.
 async function getPanelSession(): Promise<unknown> {
-  const { helenaToken } = await chrome.storage.session.get('helenaToken');
+  const helenaToken = await freshHelenaToken();
   if (!helenaToken) return { error: 'sessão do Comunic Chat ainda não captada — abra/atualize o Comunic Chat' };
   const res = await fetch(`${BACKEND_URL}/v1/panel/session`, {
     method: 'POST',
@@ -442,14 +506,28 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
         return;
       }
       case 'GET_STATUS': {
+        // O Chrome suspende o background e ele esquece o estado: pergunta ao offscreen.
+        const reg = await regSnapshot();
+        if (reg.status !== 'idle' || lastStatus.status === 'idle') {
+          lastStatus = { status: reg.status, detail: reg.detail ?? (reg.status === lastStatus.status ? lastStatus.detail : undefined) };
+        }
+        if (reg.callState) lastCallState = reg.callState;
         sendResponse({ ...lastStatus, callState: lastCallState });
+        if (reg.status !== 'registered') ensureConnected('popup aberto');
         return;
+      }
+      case 'HELENA_SESSION': {
+        const changed = await storeHelenaToken(raw.token, raw.expiresAt);
+        ensureConnected(changed ? 'token novo da aba' : 'aba do Comunic Chat ativa');
+        break;
       }
       case 'STATUS': {
         lastStatus = { status: raw.status, detail: raw.detail };
         if (raw.status === 'registered') reportPresence('online', true);
         else if (raw.status === 'failed' || raw.status === 'idle') reportPresence('offline', true);
-        if (raw.status === 'failed' && (await signatureExpiringSoon())) renewSignature();
+        if (raw.status === 'registered') { connectingSince = 0; failStreak = 0; }
+        if (raw.status === 'connecting' && !connectingSince) connectingSince = Date.now();
+        if (raw.status === 'failed') ensureConnected('registro falhou');
         broadcastToPopup({ target: 'popup', type: 'STATUS', status: raw.status, detail: raw.detail });
         break;
       }
