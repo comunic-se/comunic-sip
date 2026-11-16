@@ -92,6 +92,7 @@ async function copyStatic() {
     copyFile('assets/icon-32.png', `${outdir}/icon-32.png`),
     copyFile('assets/icon-48.png', `${outdir}/icon-48.png`),
     copyFile('assets/icon-128.png', `${outdir}/icon-128.png`),
+    copyFile('assets/logo-comunic.svg', `${outdir}/logo-comunic.svg`),
   ]);
 }
 

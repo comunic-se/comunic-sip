@@ -23,6 +23,8 @@ const PHONE_SVG =
 const statusDot = $('status-dot');
 const appbarTitle = $('appbar-title');
 const statusSub = $('status-sub');
+const statusBanner = $('status-banner');
+const statusBannerText = $('status-banner-text');
 
 const dialInput = $<HTMLInputElement>('dial-input');
 const dialerMsg = $('dialer-msg');
@@ -36,6 +38,7 @@ const icNumber = $('ic-number');
 const icStatus = $('ic-status');
 const icTimer = $('ic-timer');
 const icAvatar = $('ic-avatar');
+const transferBtn = $<HTMLButtonElement>('transfer-btn');
 const muteBtn = $<HTMLButtonElement>('mute-btn');
 const muteLabel = $('mute-label');
 const holdBtn = $<HTMLButtonElement>('hold-btn');
@@ -70,8 +73,16 @@ function showView(name: ViewName): void {
   });
   if (name === 'historico') loadHistory();
   if (name === 'contatos') { if (cMode === 'ramais') loadExtensions(); else loadContacts(); }
-  if (name === 'settings') openAudioSettings();
+  // Em Ajustes a barra de abas some; volta pela engrenagem (que vira "fechar").
+  const inSettings = name === 'settings';
+  document.body.classList.toggle('settings-open', inSettings);
+  const gear = $('settings-btn');
+  gear.classList.toggle('active', inSettings);
+  gear.title = inSettings ? 'Fechar ajustes' : 'Ajustes';
+  gear.setAttribute('aria-label', gear.title);
+  if (inSettings) openAudioSettings();
   else stopMicTest();
+  if (name === 'teclado') dialInput.focus();
 }
 
 // ---------- Histórico (CDR) ----------
@@ -156,8 +167,13 @@ function renderStatus(status: RegStatus, detail?: string): void {
   lastRegStatus = status;
   lastRegDetail = detail;
   statusDot.className = `dot dot--${status}`;
-  appbarTitle.textContent = extensionNumber ? `Ramal ${extensionNumber}` : 'Comunic.SIP';
-  statusSub.textContent = detail || (status === 'idle' ? 'Abra o Comunic Chat para conectar' : STATUS_LABEL[status]);
+  appbarTitle.textContent = extensionNumber ? `Ramal ${extensionNumber}` : '';
+  statusSub.textContent = STATUS_LABEL[status];
+  // Detalhe longo (motivo da falha, "abra o Comunic Chat"…) vai para a faixa abaixo do cabeçalho.
+  const note = status === 'registered' ? '' : (detail || (status === 'idle' ? 'Abra o Comunic Chat para conectar o ramal' : ''));
+  statusBannerText.textContent = note;
+  statusBanner.hidden = !note;
+  statusBanner.classList.toggle('banner--error', status === 'failed');
   callBtn.disabled = status !== 'registered';
 }
 
@@ -171,6 +187,7 @@ function setHeaderForCall(state: CallState): void {
   const label = incoming ? 'Chamada recebida' : (CALL_LABEL[state.callStatus ?? ''] ?? 'Em ligação');
   statusDot.className = state.callStatus === 'talking' ? 'dot dot--registered' : 'dot dot--connecting';
   statusSub.textContent = label;
+  statusBanner.hidden = true;
 }
 
 // ---------- Cronômetro / avatar ----------
@@ -231,6 +248,12 @@ function renderCall(state: CallState): void {
       muteBtn.classList.toggle('active', !!state.isMute);
       holdLabel.textContent = state.isHold ? 'Retomar' : 'Espera';
       holdBtn.classList.toggle('active', !!state.isHold);
+
+      // Transferir só depois que a outra ponta atende.
+      const answered = state.callStatus === 'talking';
+      transferBtn.disabled = !answered;
+      transferBtn.title = answered ? 'Transferir' : 'Disponível quando a chamada for atendida';
+      if (!answered && !transferPanel.hidden) closeTransfer();
 
       stopTimer();
       if (state.callStatus === 'talking' && state.callStartTime) {
@@ -299,6 +322,18 @@ callBtn.addEventListener('click', () => {
   if (!number) return;
   dialerMsg.textContent = '';
   chrome.runtime.sendMessage({ target: 'background', type: 'CALL', number });
+});
+
+// ENTER no teclado liga (com o foco no campo ou numa tecla do teclado).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  if ($('view-teclado').hidden || document.body.classList.contains('in-call')) return;
+  const t = e.target as HTMLElement | null;
+  if (t && t !== dialInput && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+  e.preventDefault(); // evita que o Enter "clique" a tecla focada e acrescente um dígito
+  if (!dialInput.value.trim()) return;
+  if (callBtn.disabled) { dialerMsg.textContent = 'Ramal não conectado.'; return; }
+  callBtn.click();
 });
 
 // ---------- Controles da chamada ----------
@@ -383,7 +418,8 @@ transferInput.addEventListener('input', () => {
   if (xferMode === 'pad' && /[a-zà-ú]/i.test(transferInput.value)) setXferMode('dir');
   else if (xferMode === 'dir') renderDirectory();
 });
-$('transfer-btn').addEventListener('click', () => {
+transferBtn.addEventListener('click', () => {
+  if (transferBtn.disabled) return;
   dtmfPad.hidden = true;
   if (!transferPanel.hidden) { closeTransfer(); return; }
   transferPanel.hidden = false;

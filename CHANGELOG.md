@@ -5,6 +5,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Extensão: ENTER liga.** Digitou o número no teclado, Enter disca (com o foco no campo ou numa tecla). Sem ramal conectado, avisa em vez de discar.
+- **Extensão: visual do Comunic Chat** (medido em comunic.flw.chat): cabeçalho branco com o logo e pílula de status ("Ramal 201 · Disponível"), faixa azul de aviso no padrão "Ative as notificações na web" para desconexão/falha, área cinza `#f1f5f9`, abas com destaque cinza no item ativo, segmentos como "Novos/Meus", campos contornados de 6px e botões pílula.
 - **Extensão: ajustes de áudio.** A engrenagem permite escolher o microfone (vale na próxima chamada), o alto-falante da voz da chamada e o dispositivo do toque (esses dois mudam na hora). Também dá para ajustar o volume do toque, ligar ou desligar o toque, testar o som e medir o nível do microfone. Se um dispositivo é desconectado, a extensão volta sozinha ao padrão do sistema.
 - **Extensão: ramais da organização na aba Contatos** (alternância Contatos / Ramais), com busca por nome ou número, status Conectado/Desconectado e botão de ligar. O `/v1/directory` passa a devolver o `status` de presença.
 - **Deploy em VM dedicada:**
@@ -14,6 +16,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
   - `scripts/primeiro-acesso.mjs` (PBX e empresa num banco novo, com segredos digitados sem eco e testados no PBX).
 
 ### Alterado
+- **Extensão: Transferir só com a chamada atendida.** O botão fica desabilitado enquanto chama/toca e o painel de transferência fecha se a chamada ainda não foi atendida.
+- **Extensão: Ajustes sem barra de abas.** Em Ajustes a barra inferior some; a engrenagem fica destacada e vira "Fechar ajustes".
+- **Extensão: novo ícone** — o balão do "C" do logo Comunic Chat (16/32/48/128 e 512 para a loja).
 - **Extensão com ID fixo** (`gihpjglehjmbghdfodgoekdpfkigamci`, pela `key` no manifest) e painel apontando para ele. Novos `npm run pack` (zip para instalação manual) e `npm run pack:store` (zip sem `key` para a loja).
 - **Extensão sem configuração de conectividade:** backend e PBX são definidos no build (`npm run build:prod` ou `--backend`/`--pbx`) e entram como permissões fixas no manifest gerado. Saíram a URL do backend, o "Ativar login integrado" e o modo manual (PBX/ramal/assinatura digitados), além da mensagem `INIT_SDK`.
 - **Segurança para produção:** extensão só entrega sessão à origem exata do backend; limite de requisições (geral e apertado em login, emergência, presença, exportação, sincronizar) com chave por sessão; cabeçalhos de segurança e CSP do painel; backup cifrado do banco com rotação e restauração/teste em banco temporário (`scripts/backup.sh`, `scripts/restaurar.sh`).
