@@ -38,51 +38,112 @@ function trackCall(state: CallState): void {
   }
 }
 
-function updateCallNotification(state: CallState): void {
+// ---------- Chamada na tela ----------
+// Chrome em primeiro plano: a extensão abre sozinha, já tocando (popup da extensão).
+// Chrome atrás de outra janela, minimizado ou sem foco: notificação do Chrome com o logo
+// do Comunic.Chat e Atender/Recusar. Clicar num botão (ou na notificação) executa a ação,
+// some com a notificação e traz o Chrome para a frente com a extensão aberta.
+
+/** Janela normal do Chrome que está em uso (null se o Chrome não está em primeiro plano). */
+async function focusedChromeWindow(): Promise<chrome.windows.Window | null> {
+  const w = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => null);
+  return w && w.focused && w.state !== 'minimized' ? w : null;
+}
+
+let extWindowId: number | null = null;
+chrome.windows.onRemoved.addListener((id) => { if (id === extWindowId) extWindowId = null; });
+
+/** Traz o Chrome para a frente e abre a extensão (popup; se não der, uma janelinha dela). */
+async function showExtension(): Promise<void> {
+  let w = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => null);
+  if (!w?.id) w = await chrome.windows.create({ focused: true }).catch(() => null) ?? null;
+  if (w?.id != null) {
+    await chrome.windows.update(w.id, { focused: true, ...(w.state === 'minimized' ? { state: 'normal' as const } : {}) }).catch(() => {});
+    try {
+      await chrome.action.openPopup({ windowId: w.id });
+      return;
+    } catch { /* Chrome antigo ou janela ainda sem foco: usa a janelinha */ }
+  }
+  if (extWindowId != null) {
+    const ok = await chrome.windows.update(extWindowId, { focused: true, state: 'normal' }).then(() => true).catch(() => false);
+    if (ok) return;
+  }
+  const win = await chrome.windows.create({
+    url: chrome.runtime.getURL('popup.html'), type: 'popup', width: 336, height: 460, focused: true,
+  }).catch(() => null);
+  extWindowId = win?.id ?? null;
+}
+
+let shownForCall: string | null = null; // chamada para a qual a extensão já foi aberta
+
+async function updateCallNotification(state: CallState): Promise<void> {
   if (!state.active) {
     notifButtons = [];
+    shownForCall = null;
     chrome.notifications.clear(NOTIF_ID);
     return;
   }
   const who = state.name || state.number || 'Desconhecido';
   const incoming = state.direction === 'inbound' && (state.callStatus === 'ringing' || state.isRing);
   const icon = chrome.runtime.getURL('icon-128.png');
+  const front = await focusedChromeWindow();
 
   if (incoming) {
+    const key = state.callId || who;
+    if (front) {
+      // Chrome na frente: a extensão aparece tocando, sem notificação.
+      chrome.notifications.clear(NOTIF_ID);
+      if (shownForCall !== key) {
+        shownForCall = key;
+        try { await chrome.action.openPopup({ windowId: front.id }); return; } catch { /* cai para a notificação */ }
+      } else return;
+    }
     notifButtons = ['answer', 'reject'];
     chrome.notifications.create(NOTIF_ID, {
       type: 'basic',
       iconUrl: icon,
       title: who,
-      message: 'Chamada recebida',
+      message: state.name && state.number ? `${state.number} · Chamada recebida` : 'Chamada recebida',
+      contextMessage: 'Comunic.Chat',
       priority: 2,
       requireInteraction: true,
       // Sem o "plim" do sistema: quem toca é a extensão (som de telefone, em loop).
       silent: true,
       buttons: [{ title: 'Atender' }, { title: 'Recusar' }],
     });
-  } else {
-    const label = state.callStatus === 'talking' ? 'Em conversa' : 'Chamando…';
-    notifButtons = ['hangup'];
-    chrome.notifications.create(NOTIF_ID, {
-      type: 'basic',
-      iconUrl: icon,
-      title: who,
-      message: label,
-      priority: 1,
-      requireInteraction: true,
-      silent: true,
-      buttons: [{ title: 'Desligar' }],
-    });
+    return;
   }
+
+  // Em andamento: só avisa se o Chrome não está na frente (na frente, a extensão já mostra).
+  if (front) { notifButtons = []; chrome.notifications.clear(NOTIF_ID); return; }
+  const label = state.callStatus === 'talking' ? 'Em conversa' : 'Chamando…';
+  notifButtons = ['hangup'];
+  chrome.notifications.create(NOTIF_ID, {
+    type: 'basic',
+    iconUrl: icon,
+    title: who,
+    message: label,
+    contextMessage: 'Comunic.Chat',
+    priority: 1,
+    requireInteraction: true,
+    silent: true,
+    buttons: [{ title: 'Desligar' }],
+  });
 }
 
 chrome.notifications.onButtonClicked.addListener((id, index) => {
   if (id !== NOTIF_ID) return;
   const action = notifButtons[index];
-  if (action) {
-    chrome.runtime.sendMessage({ target: 'offscreen', type: 'CALL_ACTION', action }).catch(() => {});
-  }
+  notifButtons = [];
+  chrome.notifications.clear(NOTIF_ID);
+  if (action) chrome.runtime.sendMessage({ target: 'offscreen', type: 'CALL_ACTION', action }).catch(() => {});
+  showExtension();
+});
+// Clique no corpo da notificação: só abre a extensão (a chamada continua tocando).
+chrome.notifications.onClicked.addListener((id) => {
+  if (id !== NOTIF_ID) return;
+  chrome.notifications.clear(NOTIF_ID);
+  showExtension();
 });
 
 async function ensureOffscreen(): Promise<void> {
@@ -542,7 +603,7 @@ chrome.runtime.onMessage.addListener((raw: AnyMessage, _sender, sendResponse) =>
         lastCallState = raw.state;
         trackCall(raw.state);
         notifyIncoming(raw.state);
-        updateCallNotification(raw.state);
+        void updateCallNotification(raw.state);
         broadcastToPopup({ target: 'popup', type: 'CALL_STATE', state: raw.state });
         break;
       }
