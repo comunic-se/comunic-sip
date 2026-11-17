@@ -6,7 +6,7 @@
 // demo oficial. O fluxo abaixo segue essas notas.
 import { init } from 'ys-webrtc-sdk-core';
 import type { AnyMessage, CallAction, CallState, HistoryItem, RegSnapshot, RegStatus, SdkConfig } from './shared/messages';
-import { DEFAULT_AUDIO, type AudioSettings } from './shared/audio';
+import { DEFAULT_AUDIO, RINGTONES, type AudioSettings } from './shared/audio';
 
 // Operador devolvido pelo SDK: { phone, pbx, destroy }
 let operator: any = null;
@@ -50,19 +50,72 @@ async function applyAudio(a: AudioSettings): Promise<void> {
   const el = document.getElementById('remote-audio');
   if (el) await routeTo(el, audio.speakerId); // troca na hora, mesmo em chamada
   if (ringCtx) await routeTo(ringCtx, audio.ringId);
+  if (ringGainNode) ringGainNode.gain.value = audio.ringEnabled ? toneGain(audio.ringVolume) : 0; // volume muda na hora
 }
 
 chrome.runtime.sendMessage({ target: 'background', type: 'GET_AUDIO' })
   .then((a) => { if (a) applyAudio(a as AudioSettings); })
   .catch(() => { /* background acordando; segue com o padrão */ });
 
-/** Volume 0–100 → ganho (curva quadrática, mais natural ao ouvido). */
-function ringGain(volume: number): number {
-  const v = Math.max(0, Math.min(100, volume)) / 100;
-  return 0.3 * v * v;
+// --- Toque de chamada recebida (WebAudio + arquivo de toque em loop) ---
+// O toque é um arquivo curto (um ciclo: toca + pausa) repetido em loop até atender,
+// recusar ou a chamada cair. Toca no dispositivo de toque escolhido (setSinkId).
+let ringCtx: AudioContext | null = null;
+let ringSrc: AudioBufferSourceNode | null = null;
+let ringGainNode: GainNode | null = null;
+let ringing = false;
+const toneCache = new Map<string, AudioBuffer>();
+
+async function loadTone(ctx: AudioContext, id: string): Promise<AudioBuffer> {
+  const key = RINGTONES.some((t) => t.id === id) ? id : DEFAULT_AUDIO.ringTone;
+  const hit = toneCache.get(key);
+  if (hit) return hit;
+  const res = await fetch(chrome.runtime.getURL(`ringtones/${key}.mp3`));
+  const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+  toneCache.set(key, buf);
+  return buf;
 }
 
-/** Duas notas curtas (o "plim-plom" do toque). */
+/** Volume 0–100 → ganho (curva quadrática, mais natural ao ouvido). */
+function toneGain(volume: number): number {
+  const v = Math.max(0, Math.min(100, volume)) / 100;
+  return v * v;
+}
+
+async function startRing(): Promise<void> {
+  if (ringing || !audio.ringEnabled) return; // já tocando, ou toque desligado
+  ringing = true;
+  try {
+    ringCtx = ringCtx ?? new AudioContext();
+    const ctx = ringCtx;
+    if (ctx.state === 'suspended') await ctx.resume().catch(() => { /* */ });
+    await routeTo(ctx, audio.ringId);
+    const buf = await loadTone(ctx, audio.ringTone);
+    if (!ringing) return; // atendeu/recusou enquanto carregava
+    ringGainNode = ctx.createGain();
+    ringGainNode.gain.value = toneGain(audio.ringVolume);
+    ringSrc = ctx.createBufferSource();
+    ringSrc.buffer = buf;
+    ringSrc.loop = true;
+    ringSrc.connect(ringGainNode).connect(ctx.destination);
+    ringSrc.start();
+  } catch (e) {
+    console.warn('[Comunic.SIP] toque falhou', e);
+  }
+}
+
+function stopRing(): void {
+  ringing = false;
+  if (ringSrc) {
+    try { ringSrc.stop(); } catch { /* já parado */ }
+    ringSrc.disconnect();
+    ringSrc = null;
+  }
+  ringGainNode?.disconnect();
+  ringGainNode = null;
+}
+
+/** Duas notas curtas — só para o teste do alto-falante em Ajustes. */
 function chime(ctx: AudioContext, peak: number): void {
   const t0 = ctx.currentTime;
   [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
@@ -79,39 +132,32 @@ function chime(ctx: AudioContext, peak: number): void {
   });
 }
 
-// --- Toque de chamada recebida (WebAudio) ---
-let ringCtx: AudioContext | null = null;
-let ringTimer: ReturnType<typeof setInterval> | null = null;
-
-function startRing(): void {
-  if (ringTimer !== null || !audio.ringEnabled) return; // já tocando, ou toque desligado
-  try {
-    ringCtx = ringCtx ?? new AudioContext();
-    const ctx = ringCtx;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => { /* */ });
-    const play = () => chime(ctx, ringGain(audio.ringVolume));
-    ringTimer = setInterval(play, 2500);
-    // Direciona para o dispositivo de toque e soa a primeira vez (se ainda estiver tocando).
-    routeTo(ctx, audio.ringId).finally(() => { if (ringTimer !== null) play(); });
-  } catch (e) {
-    console.warn('[Comunic.SIP] toque falhou', e);
-  }
-}
-
-/** Teste disparado em Ajustes: toca no dispositivo de toque ou no alto-falante. */
+/** Teste disparado em Ajustes: um ciclo do toque escolhido, ou um bipe no alto-falante. */
 async function testSound(kind: 'ring' | 'speaker', a: AudioSettings): Promise<void> {
   await applyAudio(a);
   const ctx = new AudioContext();
   await routeTo(ctx, kind === 'ring' ? audio.ringId : audio.speakerId);
   if (ctx.state === 'suspended') await ctx.resume().catch(() => { /* */ });
-  const peak = kind === 'ring' ? ringGain(audio.ringVolume) : 0.12;
-  chime(ctx, peak);
-  setTimeout(() => chime(ctx, peak), 900);
-  setTimeout(() => ctx.close().catch(() => { /* */ }), 2200);
-}
-
-function stopRing(): void {
-  if (ringTimer !== null) { clearInterval(ringTimer); ringTimer = null; }
+  if (kind === 'speaker') {
+    chime(ctx, 0.12);
+    setTimeout(() => chime(ctx, 0.12), 900);
+    setTimeout(() => ctx.close().catch(() => { /* */ }), 2200);
+    return;
+  }
+  try {
+    const buf = await loadTone(ctx, audio.ringTone);
+    const g = ctx.createGain();
+    g.gain.value = toneGain(audio.ringVolume);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(g).connect(ctx.destination);
+    src.start();
+    const playMs = Math.min(buf.duration, 4.5) * 1000;
+    setTimeout(() => { try { src.stop(); } catch { /* */ } ctx.close().catch(() => { /* */ }); }, playMs);
+  } catch (e) {
+    console.warn('[Comunic.SIP] teste do toque falhou', e);
+    ctx.close().catch(() => { /* */ });
+  }
 }
 
 let regStatus: RegStatus = 'idle';

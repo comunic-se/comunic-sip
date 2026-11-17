@@ -80,8 +80,10 @@ async function writeManifest() {
   await writeFile(`${outdir}/manifest.json`, JSON.stringify(m, null, 2) + '\n');
 }
 
+const RINGTONE_IDS = ['campainha', 'classico', 'duplo', 'americano', 'digital', 'suave'];
+
 async function copyStatic() {
-  await mkdir(outdir, { recursive: true });
+  await mkdir(`${outdir}/ringtones`, { recursive: true });
   await Promise.all([
     writeManifest(),
     copyFile('src/offscreen.html', `${outdir}/offscreen.html`),
@@ -93,6 +95,7 @@ async function copyStatic() {
     copyFile('assets/icon-48.png', `${outdir}/icon-48.png`),
     copyFile('assets/icon-128.png', `${outdir}/icon-128.png`),
     copyFile('assets/logo-comunic.svg', `${outdir}/logo-comunic.svg`),
+    ...RINGTONE_IDS.map((id) => copyFile(`assets/ringtones/${id}.mp3`, `${outdir}/ringtones/${id}.mp3`)),
   ]);
 }
 

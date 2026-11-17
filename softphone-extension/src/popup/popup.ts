@@ -9,7 +9,7 @@ import type {
   RegStatus,
   StatusSnapshot,
 } from '../shared/messages';
-import { DEFAULT_AUDIO, type AudioSettings } from '../shared/audio';
+import { DEFAULT_AUDIO, RINGTONES, type AudioSettings, type RingTone } from '../shared/audio';
 import { BUILD_INFO } from '../shared/config';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -490,6 +490,8 @@ const audRing = $<HTMLSelectElement>('aud-ring');
 const audVol = $<HTMLInputElement>('aud-vol');
 const audVolVal = $('aud-vol-val');
 const audRingOn = $<HTMLInputElement>('aud-ring-on');
+const audTone = $<HTMLSelectElement>('aud-tone');
+audTone.innerHTML = RINGTONES.map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
 let audioCfg: AudioSettings = { ...DEFAULT_AUDIO };
 
 async function loadAudioCfg(): Promise<void> {
@@ -539,6 +541,7 @@ async function openAudioSettings(): Promise<void> {
   audVol.value = String(audioCfg.ringVolume);
   audVolVal.textContent = `${audioCfg.ringVolume}%`;
   audRingOn.checked = audioCfg.ringEnabled;
+  audTone.value = audioCfg.ringTone;
   renderAbout();
   await fillDevices();
 }
@@ -550,6 +553,12 @@ audRing.addEventListener('change', () => saveAudio({ ringId: audRing.value }));
 audVol.addEventListener('input', () => { audVolVal.textContent = `${audVol.value}%`; });
 audVol.addEventListener('change', () => saveAudio({ ringVolume: Number(audVol.value) }));
 audRingOn.addEventListener('change', () => saveAudio({ ringEnabled: audRingOn.checked }));
+const testRing = async () => {
+  await saveAudio({ ringVolume: Number(audVol.value), ringTone: audTone.value as RingTone }); // testa com o que está na tela
+  chrome.runtime.sendMessage({ target: 'background', type: 'TEST_SOUND', kind: 'ring' });
+};
+audTone.addEventListener('change', testRing); // escolheu, já ouve
+$('test-tone').addEventListener('click', testRing);
 $('test-speaker').addEventListener('click', () => chrome.runtime.sendMessage({ target: 'background', type: 'TEST_SOUND', kind: 'speaker' }));
 $('test-ring').addEventListener('click', async () => {
   await saveAudio({ ringVolume: Number(audVol.value) }); // testa com o volume que está na tela

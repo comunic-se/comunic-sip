@@ -11,7 +11,20 @@ export interface AudioSettings {
   ringVolume: number;
   /** Tocar o toque de chamada recebida. */
   ringEnabled: boolean;
+  /** Som do toque (arquivo em ringtones/<id>.mp3). */
+  ringTone: RingTone;
 }
+
+// Toques de telefone (sintetizados para o Comunic.Chat; um ciclo cada, tocado em loop).
+export type RingTone = 'campainha' | 'classico' | 'duplo' | 'americano' | 'digital' | 'suave';
+export const RINGTONES: { id: RingTone; label: string }[] = [
+  { id: 'campainha', label: 'Campainha de telefone' },
+  { id: 'classico', label: 'Clássico (Brasil)' },
+  { id: 'duplo', label: 'Toque duplo' },
+  { id: 'americano', label: 'Americano' },
+  { id: 'digital', label: 'Digital (PABX)' },
+  { id: 'suave', label: 'Suave' },
+];
 
 export const DEFAULT_AUDIO: AudioSettings = {
   micId: '',
@@ -19,4 +32,5 @@ export const DEFAULT_AUDIO: AudioSettings = {
   ringId: '',
   ringVolume: 60,
   ringEnabled: true,
+  ringTone: 'campainha',
 };

@@ -57,6 +57,8 @@ function updateCallNotification(state: CallState): void {
       message: 'Chamada recebida',
       priority: 2,
       requireInteraction: true,
+      // Sem o "plim" do sistema: quem toca é a extensão (som de telefone, em loop).
+      silent: true,
       buttons: [{ title: 'Atender' }, { title: 'Recusar' }],
     });
   } else {
@@ -69,6 +71,7 @@ function updateCallNotification(state: CallState): void {
       message: label,
       priority: 1,
       requireInteraction: true,
+      silent: true,
       buttons: [{ title: 'Desligar' }],
     });
   }
