@@ -1,6 +1,6 @@
 {
   "name": "softphone-extension",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Softphone do Comunic Chat integrado ao Yeastar P-Series (extensão MV3).",
   "type": "module",
   "scripts": {

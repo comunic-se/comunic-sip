@@ -298,15 +298,17 @@ function wireBackspace(btn: HTMLButtonElement, input: HTMLInputElement): () => v
   let heldLong = false;
   const sync = () => btn.classList.toggle('is-empty', input.value.length === 0);
   const cancel = () => { if (timer) clearTimeout(timer); timer = undefined; };
+  // Avisa quem escuta o campo (ex.: a busca da transferência), como se tivesse digitado.
+  const changed = () => input.dispatchEvent(new Event('input'));
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault(); // não tira o foco do campo
     heldLong = false;
     cancel();
-    timer = setTimeout(() => { heldLong = true; timer = undefined; input.value = ''; sync(); }, HOLD_MS);
+    timer = setTimeout(() => { heldLong = true; timer = undefined; input.value = ''; changed(); }, HOLD_MS);
   });
   btn.addEventListener('pointerup', () => {
     cancel();
-    if (!heldLong) { input.value = input.value.slice(0, -1); sync(); }
+    if (!heldLong) { input.value = input.value.slice(0, -1); changed(); }
   });
   btn.addEventListener('pointerleave', cancel);
   btn.addEventListener('pointercancel', cancel);
@@ -370,7 +372,7 @@ function setXferMode(mode: 'pad' | 'dir'): void {
   document.querySelectorAll<HTMLElement>('.seg-btn').forEach((b) => b.classList.toggle('active', b.dataset.xmode === mode));
   $('transfer-pad').hidden = mode !== 'pad';
   transferDir.hidden = mode !== 'dir';
-  if (mode === 'dir') renderDirectory();
+  renderSearch();
 }
 document.querySelectorAll<HTMLElement>('.seg-btn').forEach((b) =>
   b.addEventListener('click', () => { setXferMode(b.dataset.xmode as 'pad' | 'dir'); transferInput.focus(); }),
@@ -382,19 +384,38 @@ async function loadDirectory(): Promise<void> {
     { items?: DirItem[]; error?: string } | null;
   if (resp?.items) directory = resp.items.filter((i) => !i.me);
   else directoryError = resp?.error || 'Não consegui carregar os ramais.';
-  if (xferMode === 'dir') renderDirectory();
+  renderSearch();
 }
 
 function norm(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+/** Busca por nome (sem acento/maiúscula) ou por número (só os dígitos), usada nas duas abas. */
+function searchDirectory(raw: string): DirItem[] {
+  if (!directory) return [];
+  const v = raw.trim();
+  if (!v) return directory;
+  const q = norm(v);
+  const digits = v.replace(/\D/g, '');
+  const hits = directory.filter((d) =>
+    norm(d.name).includes(q) || (digits !== '' && d.extension.includes(digits)) || d.extension.includes(v));
+  // Quem começa com o que foi digitado vem primeiro.
+  const starts = (d: DirItem) => (d.extension.startsWith(digits || '\u0000') || norm(d.name).startsWith(q) ? 0 : 1);
+  return hits.sort((a, b) => starts(a) - starts(b));
+}
+
+function pickExtension(ext: string): void {
+  transferInput.value = ext;
+  syncXferBackspace();
+  renderSearch();
+}
+
 function renderDirectory(): void {
   transferDir.innerHTML = '';
   const empty = (t: string) => { const p = document.createElement('div'); p.className = 'dir-empty'; p.textContent = t; transferDir.appendChild(p); };
   if (!directory) { empty(directoryError || 'Carregando ramais…'); return; }
-  const q = norm(transferInput.value.trim());
-  const list = q ? directory.filter((d) => norm(d.name).includes(q) || d.extension.includes(q)) : directory;
+  const list = searchDirectory(transferInput.value);
   if (!list.length) { empty(directory.length ? 'Nenhum ramal encontrado.' : 'Nenhum outro ramal na empresa.'); return; }
   for (const d of list) {
     const b = document.createElement('button');
@@ -404,20 +425,46 @@ function renderDirectory(): void {
     const ex = document.createElement('span'); ex.className = 'dir-ext'; ex.textContent = d.extension;
     b.append(av, nm, ex);
     b.addEventListener('pointerdown', (e) => e.preventDefault());
-    b.addEventListener('click', () => {
-      transferInput.value = d.extension;
-      syncXferBackspace();
-      renderDirectory();
-    });
+    b.addEventListener('click', () => pickExtension(d.extension));
     transferDir.appendChild(b);
   }
 }
 
-// Digitou letra? Vai pra lista e filtra por nome. Em "Ramais", qualquer digitação filtra.
-transferInput.addEventListener('input', () => {
-  if (xferMode === 'pad' && /[a-zà-ú]/i.test(transferInput.value)) setXferMode('dir');
-  else if (xferMode === 'dir') renderDirectory();
-});
+/** Aba Teclado: resultados em linha, acima do teclado (o teclado continua à mão). */
+const transferSugg = $('transfer-sugg');
+function renderSuggestions(): void {
+  const v = transferInput.value.trim();
+  const list = v && directory ? searchDirectory(v) : [];
+  // Já é exatamente um ramal escolhido? Não precisa sugerir.
+  const exact = list.length === 1 && list[0].extension === v;
+  transferSugg.hidden = xferMode !== 'pad' || !v || exact || (!!directory && !list.length && /^[0-9*#+]+$/.test(v));
+  if (transferSugg.hidden) return;
+  transferSugg.innerHTML = '';
+  if (!list.length) {
+    const p = document.createElement('span'); p.className = 'sugg-empty'; p.textContent = directory ? 'Nenhum ramal encontrado' : 'Carregando ramais…';
+    transferSugg.appendChild(p);
+    return;
+  }
+  for (const d of list.slice(0, 8)) {
+    const b = document.createElement('button');
+    b.className = 'sugg-chip';
+    b.title = `${d.name} · ${d.extension}`;
+    const nm = document.createElement('span'); nm.className = 'sugg-name'; nm.textContent = d.name;
+    const ex = document.createElement('span'); ex.className = 'sugg-ext'; ex.textContent = d.extension;
+    b.append(nm, ex);
+    b.addEventListener('pointerdown', (e) => e.preventDefault());
+    b.addEventListener('click', () => pickExtension(d.extension));
+    transferSugg.appendChild(b);
+  }
+}
+
+function renderSearch(): void {
+  if (xferMode === 'dir') renderDirectory();
+  renderSuggestions();
+}
+
+// Nome ou número: filtra nas duas abas (Teclado mostra os resultados acima do teclado).
+transferInput.addEventListener('input', renderSearch);
 transferBtn.addEventListener('click', () => {
   if (transferBtn.disabled) return;
   dtmfPad.hidden = true;
@@ -441,17 +488,16 @@ for (const [d, letters] of PAD) {
   b.className = 'key';
   b.innerHTML = `<b>${d}</b><s>${letters}</s>`;
   b.addEventListener('pointerdown', (e) => e.preventDefault()); // mantém o foco no campo
-  b.addEventListener('click', () => { transferInput.value += d; syncXferBackspace(); });
+  b.addEventListener('click', () => { transferInput.value += d; syncXferBackspace(); renderSearch(); });
   transferPad.appendChild(b);
 }
 /** Destino da transferência: número digitado, ou o ramal do único nome que bate com a busca. */
 function transferDest(): string {
   const v = transferInput.value.trim();
   if (!v || /^[0-9*#+]+$/.test(v)) return v;
-  const q = norm(v);
-  const hits = (directory ?? []).filter((d) => norm(d.name).includes(q));
+  const hits = searchDirectory(v);
   if (hits.length === 1) return hits[0].extension;
-  setXferMode('dir'); // vários (ou nenhum): mostra a lista pra escolher
+  renderSearch(); // vários (ou nenhum): os resultados ficam à vista para escolher
   return '';
 }
 $('transfer-do').addEventListener('click', () => {

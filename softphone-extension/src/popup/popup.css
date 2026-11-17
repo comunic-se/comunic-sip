@@ -464,3 +464,23 @@ body { font-family: "Inter var", Inter, ui-sans-serif, system-ui, -apple-system,
 .empty, .dir-empty { color: var(--muted); font-size: 13px; }
 .set-note { background: #fff; border: 1px solid var(--border); }
 #view-settings .set-title:not(:first-child) { border-top-color: #e2e8f0; }
+
+/* Busca na aba Teclado da transferência: resultados em linha, acima do teclado */
+.xfer-sugg { display: flex; gap: 6px; overflow-x: auto; flex: 0 0 auto; padding: 1px 0 3px; scrollbar-width: thin; }
+.xfer-sugg::-webkit-scrollbar { height: 4px; }
+.xfer-sugg::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.sugg-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; max-width: 200px;
+  height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--field-border);
+  background: #fff; font: inherit; font-size: 12px; color: var(--text); cursor: pointer;
+}
+.sugg-chip:hover { border-color: var(--action); background: var(--action-soft); }
+.sugg-name { font-weight: 600; color: var(--title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sugg-ext { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sugg-empty { font-size: 12px; color: var(--muted); padding: 5px 2px; }
+/* Com resultados à vista, o teclado encolhe para nada sair da tela (Desligar sempre visível) */
+.transfer:has(.xfer-sugg:not([hidden])) { gap: 6px; }
+.transfer:has(.xfer-sugg:not([hidden])) .keypad--compact { gap: 3px; }
+.transfer:has(.xfer-sugg:not([hidden])) .keypad--compact .key { height: 21px; }
+.transfer:has(.xfer-sugg:not([hidden])) .keypad--compact .key s { display: none; }
+.sugg-chip { height: 26px; }

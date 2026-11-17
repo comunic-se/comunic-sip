@@ -5,6 +5,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Não lançado]
 
 ### Adicionado
+- **Extensão: busca na transferência pelas duas abas.** Digitando nome ou número, a aba **Teclado** mostra os ramais encontrados numa linha acima do teclado (que encolhe para o Desligar continuar à vista), e a aba **Ramais** filtra a lista — sem pular de aba. Busca ignora acento e maiúscula, e quem começa com o que foi digitado aparece primeiro. Apagar pelo botão também atualiza a busca.
 - **Extensão: toque de telefone de verdade.** O "plim-plom" (que parecia notificação) virou um toque de telefone em loop até atender/recusar, com 6 opções em Ajustes → Som do toque (Campainha de telefone — padrão —, Clássico Brasil, Toque duplo, Americano, Digital/PABX e Suave); escolher já toca uma amostra. Volume muda na hora, inclusive tocando. A notificação da chamada não toca mais o som do sistema por cima.
 - **Painel: Chamadas com gravações.** A tela Gravações saiu; em Chamadas cada linha com gravação tem **Ouvir** e **Baixar**, e dá para marcar várias (a seleção vale entre páginas) e **baixar em ZIP** (até 200 por vez, montado em fluxo, auditado como `recording_download_zip`). Novo filtro "Só com gravação".
 - **Painel: filtros por grupo** (setores do Comunic Chat) em Chamadas, Dashboard e Ramais, e por atendente em Chamadas e Dashboard; em Ramais também por função e status. Nova rota `GET /v1/panel/groups`.
